@@ -1,0 +1,330 @@
+// Prisma Schema for Darelkola Clinic CRM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ===========================================
+// Core Tables
+// ===========================================
+
+model Clinic {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  appointments Appointment[]
+
+  @@map("clinics")
+}
+
+model User {
+  id        String   @id // Same ID as Supabase Auth user
+  email     String   @unique
+  name      String
+  role      UserRole @default(RECEPTIONIST)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum UserRole {
+  DOCTOR
+  RECEPTIONIST
+}
+
+// ===========================================
+// Patient Management
+// ===========================================
+
+model Patient {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  personalHistory     PersonalHistory?
+  previousMedications PreviousMedication[]
+  investigations      Investigation[]
+  sessions            Session[]
+  appointments        Appointment[]
+
+  @@map("patients")
+}
+
+model PersonalHistory {
+  id        String @id @default(cuid())
+  patientId String @unique @map("patient_id")
+
+  // Demographics
+  fullName      String    @map("full_name")
+  phoneNumber   String    @map("phone_number")
+  dateOfBirth   DateTime? @map("date_of_birth") @db.Date
+  sex           String?
+  maritalStatus String?   @map("marital_status")
+  offsprings    Int?
+  occupation    String?
+  residence     String?
+
+  // Medical History (simple notes)
+  presentHistory String? @map("present_history")
+  pastHistory    String? @map("past_history")
+  familyHistory  String? @map("family_history")
+
+  // General Appearance
+  built        String?
+  behavior     String?
+  intelligence String?
+  facies       String?
+  decubitus    String?
+
+  // General Examination - Vitals
+  bloodPressure String? @map("blood_pressure")
+  pulse         String?
+  supine        String?
+  respRate      String? @map("resp_rate")
+  temperature   String?
+
+  // General Examination - Neck
+  headAndNeck String? @map("head_and_neck")
+  lymphNodes  String? @map("lymph_nodes")
+  neckVeins   String? @map("neck_veins")
+  thyroid     String?
+
+  // General Examination - Limbs
+  upperLimb       String? @map("upper_limb")
+  lowerLimb       String? @map("lower_limb")
+  peripheralPulse String? @map("peripheral_pulse")
+
+  // General Examination - Systems
+  cardioExam  String? @map("cardio_exam")
+  chestExam   String? @map("chest_exam")
+  abdomenExam String? @map("abdomen_exam")
+  neuroExam   String? @map("neuro_exam")
+
+  // Assessment
+  provisionalDx String? @map("provisional_dx")
+  comments      String?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([phoneNumber])
+  @@index([fullName])
+  @@map("personal_histories")
+}
+
+model PreviousMedication {
+  id        String @id @default(cuid())
+  patientId String @map("patient_id")
+  drug      String
+  frequency String
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("previous_medications")
+}
+
+model Investigation {
+  id        String   @id @default(cuid())
+  patientId String   @map("patient_id")
+  date      DateTime @db.Date
+  invest    String
+  report    String?
+  fileUrl   String?  @map("file_url")
+  fileName  String?  @map("file_name")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("investigations")
+}
+
+// ===========================================
+// Sessions & Medications
+// ===========================================
+
+model Medication {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  dosage    String?
+  form      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sessionMedications SessionMedication[]
+
+  @@map("medications")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  patientId String   @map("patient_id")
+  date      DateTime @db.Date
+  examination String?
+
+  // Vitals
+  bloodPressure String? @map("blood_pressure")
+  pulse         String?
+  temperature   String?
+  respRate      String? @map("resp_rate")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  patient              Patient              @relation(fields: [patientId], references: [id])
+  sessionMedications   SessionMedication[]
+  investigationSheets  InvestigationSheet[]
+
+  @@index([patientId])
+  @@map("sessions")
+}
+
+model SessionMedication {
+  id           String  @id @default(cuid())
+  sessionId    String  @map("session_id")
+  medicationId String  @map("medication_id")
+  active       Boolean @default(true)
+  dosage       String?
+  frequency    String?
+  duration     String?
+  notes        String?
+
+  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  medication Medication @relation(fields: [medicationId], references: [id])
+
+  @@unique([sessionId, medicationId])
+  @@map("session_medications")
+}
+
+model InvestigationSheet {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  date      DateTime @db.Date
+
+  // Hematology
+  hb          Float?
+  wbc         Float?
+  neutrophils Float?
+  lymphocytes Float?
+  platelets   Float?
+  esr         Float?
+  crp         Float?
+
+  // Biochemistry
+  glucose         Float?
+  glucosePP       Float? @map("glucose_pp")
+  hba1c           Float?
+  na              Float?
+  k               Float?
+  ca              Float?
+  po4             Float?
+  mg              Float?
+  albumin         Float?
+  sgot            Float?
+  sgpt            Float?
+  totalBilirubin  Float? @map("total_bilirubin")
+  directBilirubin Float? @map("direct_bilirubin")
+  ggt             Float?
+  alp             Float?
+  urea            Float?
+  creatinine      Float?
+  gfr             Float?
+  uricAcid        Float? @map("uric_acid")
+  cholesterol     Float?
+  ldl             Float?
+  hdl             Float?
+  tg              Float?
+  ft3             Float?
+  ft4             Float?
+  tsh             Float?
+  pth             Float?
+
+  // Urine
+  urineRbc     Float?  @map("urine_rbc")
+  pusCells     Float?  @map("pus_cells")
+  crystals     String?
+  urineAlb     String? @map("urine_alb")
+  urinePC      String? @map("urine_pc")
+  urineCulture String? @map("urine_culture")
+
+  // Virology
+  hbsAg String? @map("hbs_ag")
+  hcAb  String? @map("hc_ab")
+  hivAb String? @map("hiv_ab")
+
+  // Drug Monitoring / Iron / PSA
+  inr       Float?
+  iron      Float?
+  ferritin  Float?
+  tibc      Float?
+  tsat      Float?
+  psaFree   Float?  @map("psa_free")
+  psaTotal  Float?  @map("psa_total")
+  psaRatio  Float?  @map("psa_ratio")
+  drugLevel String? @map("drug_level")
+
+  // Immunology
+  ana     String?
+  antiDna String? @map("anti_dna")
+  c3      Float?
+  c4      Float?
+  rf      String?
+  antiCcp String? @map("anti_ccp")
+  ancaC   String? @map("anca_c")
+  ancaP   String? @map("anca_p")
+  spep    String?
+
+  session             Session              @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  extraInvestigations ExtraInvestigation[]
+
+  @@index([sessionId])
+  @@map("investigation_sheets")
+}
+
+model ExtraInvestigation {
+  id      String  @id @default(cuid())
+  sheetId String  @map("sheet_id")
+  name    String
+  result  String?
+
+  sheet InvestigationSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@map("extra_investigations")
+}
+
+// ===========================================
+// Appointment System
+// ===========================================
+
+model Appointment {
+  id           String            @id @default(cuid())
+  patientName  String            @map("patient_name")
+  patientPhone String            @map("patient_phone")
+  patientId    String?           @map("patient_id")
+  clinicId     String            @map("clinic_id")
+  date         DateTime          @db.Date
+  status       AppointmentStatus @default(SCHEDULED)
+  queueNumber  Int?              @map("queue_number")
+  notes        String?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  clinic  Clinic   @relation(fields: [clinicId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
+
+  @@unique([patientPhone, date, clinicId])
+  @@index([clinicId, date, status])
+  @@index([patientId])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  WITH_DOCTOR
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
