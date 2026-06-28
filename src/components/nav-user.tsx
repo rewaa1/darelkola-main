@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, User, MoreVertical } from "lucide-react";
+import { getDirection, type Locale } from "@/i18n/config";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -32,6 +33,8 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const router = useRouter();
   const t = useTranslations("userMenu");
+  const locale = useLocale() as Locale;
+  const isRtl = getDirection(locale) === "rtl";
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -75,7 +78,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? "bottom" : isRtl ? "left" : "right"}
             align="end"
             sideOffset={4}
           >

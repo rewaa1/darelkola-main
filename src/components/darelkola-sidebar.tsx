@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +14,7 @@ import {
   Pill,
 } from "lucide-react";
 
+import { getDirection, type Locale } from "@/i18n/config";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -76,9 +77,13 @@ interface DarelkolaSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const locale = useLocale() as Locale;
+  // In RTL the sidebar must dock to the right; the shadcn Sidebar uses a
+  // physical `side` prop that doesn't follow `dir`, so we set it explicitly.
+  const side = getDirection(locale) === "rtl" ? "right" : "left";
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" side={side} {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
