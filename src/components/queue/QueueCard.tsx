@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { PatientHistoryDialog } from "./PatientHistoryDialog";
 import { CheckInRegistrationDialog } from "./CheckInRegistrationDialog";
 import { checkInWithPatient, checkInPatient } from "@/actions/appointments";
+import { typeColors } from "@/components/appointments/appointment-types";
 import { toast } from "sonner";
 
 interface QueueCardProps {
@@ -43,7 +44,9 @@ export function QueueCard({
 }: QueueCardProps) {
   const t = useTranslations("queue");
   const tStatus = useTranslations("queueStatus");
+  const tType = useTranslations("appointmentType");
   const tToast = useTranslations("appointmentsToast");
+  const aptType = appointment.type ?? "REGULAR_EXAMINATION";
   const [showRegistration, setShowRegistration] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
 
@@ -127,15 +130,20 @@ export function QueueCard({
               </div>
             </div>
 
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-xs shrink-0",
-                statusClassName[appointment.status],
-              )}
-            >
-              {tStatus(appointment.status)}
-            </Badge>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge
+                variant="outline"
+                className={cn("text-xs", statusClassName[appointment.status])}
+              >
+                {tStatus(appointment.status)}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn("text-[10px]", typeColors[aptType])}
+              >
+                {tType(aptType)}
+              </Badge>
+            </div>
           </div>
 
           {/* Notes */}

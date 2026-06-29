@@ -1,4 +1,4 @@
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AppointmentType } from "@prisma/client";
 
 export type AppointmentRow = {
   id: string;
@@ -8,6 +8,7 @@ export type AppointmentRow = {
   clinicId: string;
   date: Date;
   status: AppointmentStatus;
+  type: AppointmentType;
   queueNumber: number | null;
   notes: string | null;
   clinic: { name: string };
@@ -31,4 +32,17 @@ export const appointmentStatuses: AppointmentStatus[] = [
   "COMPLETED",
   "CANCELLED",
   "NO_SHOW",
+];
+
+export const typeColors: Record<AppointmentType, string> = {
+  FAST_EXAMINATION: "bg-rose-100 text-rose-700 border-rose-200",
+  REGULAR_EXAMINATION: "bg-sky-100 text-sky-700 border-sky-200",
+  CONSULTATION: "bg-violet-100 text-violet-700 border-violet-200",
+};
+
+// Canonical type order. Display labels come from the "appointmentType" i18n namespace.
+export const appointmentTypes: AppointmentType[] = [
+  "FAST_EXAMINATION",
+  "REGULAR_EXAMINATION",
+  "CONSULTATION",
 ];

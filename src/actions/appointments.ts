@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AppointmentType } from "@prisma/client";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
 
 // ===========================================
@@ -15,6 +15,7 @@ export type BookAppointmentInput = {
   patientId?: string;
   clinicId: string;
   date: string; // ISO date string
+  type?: AppointmentType;
   notes?: string;
 };
 
@@ -160,12 +161,14 @@ export async function bookAppointment(data: BookAppointmentInput) {
         patientId: data.patientId,
         clinicId: data.clinicId,
         date: appointmentDate,
+        type: data.type ?? "REGULAR_EXAMINATION",
         notes: data.notes,
         status: "SCHEDULED",
       },
     });
 
     revalidatePath("/queue");
+    revalidatePath("/appointments");
     return { success: true, appointment };
   } catch (error) {
     // Handle unique constraint violation

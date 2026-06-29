@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations, useFormatter } from "next-intl";
 import { Clinic, Patient, PersonalHistory } from "@prisma/client";
+import { appointmentTypes } from "./appointment-types";
 import {
   ResponsiveDialog as Dialog,
   ResponsiveDialogContent as DialogContent,
@@ -56,6 +57,11 @@ function buildBookingSchema(messages: {
     patientPhone: z.string().min(10, messages.phoneMin),
     clinicId: z.string().min(1, messages.selectClinic),
     date: z.date({ message: messages.selectDate }),
+    type: z.enum([
+      "FAST_EXAMINATION",
+      "REGULAR_EXAMINATION",
+      "CONSULTATION",
+    ]),
     notes: z.string().optional(),
   });
 }
@@ -70,6 +76,7 @@ interface BookingDialogProps {
 export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
   const t = useTranslations("booking");
   const tCommon = useTranslations("common");
+  const tType = useTranslations("appointmentType");
   const tv = useTranslations("booking.validation");
   const format = useFormatter();
   const [open, setOpen] = useState(false);
@@ -102,6 +109,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
       patientPhone: "",
       clinicId: clinics[0]?.id ?? "",
       date: new Date(),
+      type: "REGULAR_EXAMINATION",
       notes: "",
     },
   });
@@ -204,6 +212,35 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
                       {clinics.map((clinic) => (
                         <SelectItem key={clinic.id} value={clinic.id}>
                           {clinic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Appointment Type */}
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("type")}</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("selectType")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {appointmentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {tType(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>

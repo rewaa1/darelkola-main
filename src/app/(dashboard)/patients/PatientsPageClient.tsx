@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { differenceInYears } from "date-fns";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
+import { CardListSkeleton, DataTableSkeleton } from "@/components/skeletons";
 
 type PatientWithHistory = Patient & { personalHistory: PersonalHistory | null };
 
@@ -271,6 +272,8 @@ export function PatientsPageClient() {
 
       {/* Mobile: Infinite scroll card list */}
       <div className="space-y-1.5 md:hidden">
+        {mobileLoading && mobilePatients.length === 0 && <CardListSkeleton />}
+
         {mobilePatients.map((patient) => {
           const name = patient.personalHistory?.fullName || t("unknown");
           const phone = patient.personalHistory?.phoneNumber;
@@ -337,19 +340,23 @@ export function PatientsPageClient() {
 
       {/* Desktop: DataTable with server-side pagination */}
       <div className="hidden md:block">
-        <DataTable
-          columns={columns}
-          data={desktopData}
-          totalCount={desktopTotal}
-          page={desktopPage}
-          pageSize={desktopPageSize}
-          onPageChange={setDesktopPage}
-          onPageSizeChange={(size) => {
-            setDesktopPageSize(size);
-            setDesktopPage(1);
-          }}
-          onRowClick={(patient) => router.push(`/patients/${patient.id}`)}
-        />
+        {desktopLoading && desktopData.length === 0 ? (
+          <DataTableSkeleton columns={5} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={desktopData}
+            totalCount={desktopTotal}
+            page={desktopPage}
+            pageSize={desktopPageSize}
+            onPageChange={setDesktopPage}
+            onPageSizeChange={(size) => {
+              setDesktopPageSize(size);
+              setDesktopPage(1);
+            }}
+            onRowClick={(patient) => router.push(`/patients/${patient.id}`)}
+          />
+        )}
       </div>
     </div>
   );

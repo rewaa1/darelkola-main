@@ -61,6 +61,11 @@
     "CANCELLED": "ملغى",
     "NO_SHOW": "لم يحضر"
   },
+  "appointmentType": {
+    "FAST_EXAMINATION": "كشف مستعجل",
+    "REGULAR_EXAMINATION": "كشف عادي",
+    "CONSULTATION": "استشارة"
+  },
   "roles": {
     "DOCTOR": "طبيب",
     "RECEPTIONIST": "موظف استقبال"
@@ -420,6 +425,7 @@
       "patient": "المريض",
       "clinic": "العيادة",
       "date": "التاريخ",
+      "type": "النوع",
       "status": "الحالة"
     }
   },
@@ -428,6 +434,8 @@
     "booking": "جارٍ الحجز...",
     "clinic": "العيادة",
     "selectClinic": "اختر العيادة",
+    "type": "نوع الموعد",
+    "selectType": "اختر النوع",
     "phoneNumber": "رقم الهاتف",
     "searchByPhoneOrName": "ابحث بالهاتف أو الاسم...",
     "patientName": "اسم المريض",

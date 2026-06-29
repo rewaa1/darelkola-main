@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { deleteAppointment } from "@/actions/appointments";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
-import { AppointmentRow, statusColors } from "./appointment-types";
+import { AppointmentRow, statusColors, typeColors } from "./appointment-types";
 
 function DeleteButton({ appointmentId }: { appointmentId: string }) {
   const t = useTranslations("appointments");
@@ -47,6 +47,7 @@ function DeleteButton({ appointmentId }: { appointmentId: string }) {
 export function useAppointmentColumns(): ColumnDef<AppointmentRow>[] {
   const t = useTranslations("appointments.columns");
   const tStatus = useTranslations("status");
+  const tType = useTranslations("appointmentType");
   const format = useFormatter();
 
   return [
@@ -117,6 +118,22 @@ export function useAppointmentColumns(): ColumnDef<AppointmentRow>[] {
           })}
         </span>
       ),
+    },
+    {
+      id: "type",
+      accessorKey: "type",
+      header: () => t("type"),
+      cell: ({ row }) => {
+        const aptType = row.original.type ?? "REGULAR_EXAMINATION";
+        return (
+          <Badge
+            variant="outline"
+            className={`text-xs ${typeColors[aptType]}`}
+          >
+            {tType(aptType)}
+          </Badge>
+        );
+      },
     },
     {
       id: "status",

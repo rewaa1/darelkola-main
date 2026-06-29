@@ -61,6 +61,11 @@
     "CANCELLED": "Cancelled",
     "NO_SHOW": "No Show"
   },
+  "appointmentType": {
+    "FAST_EXAMINATION": "Fast Examination",
+    "REGULAR_EXAMINATION": "Regular Examination",
+    "CONSULTATION": "Consultation"
+  },
   "roles": {
     "DOCTOR": "Doctor",
     "RECEPTIONIST": "Receptionist"
@@ -420,6 +425,7 @@
       "patient": "Patient",
       "clinic": "Clinic",
       "date": "Date",
+      "type": "Type",
       "status": "Status"
     }
   },
@@ -428,6 +434,8 @@
     "booking": "Booking...",
     "clinic": "Clinic",
     "selectClinic": "Select clinic",
+    "type": "Appointment Type",
+    "selectType": "Select type",
     "phoneNumber": "Phone Number",
     "searchByPhoneOrName": "Search by phone or name...",
     "patientName": "Patient Name",

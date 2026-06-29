@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, Phone } from "lucide-react";
 import { useTranslations, useFormatter } from "next-intl";
 import Link from "next/link";
-import { AppointmentRow, statusColors } from "./appointment-types";
+import { AppointmentRow, statusColors, typeColors } from "./appointment-types";
 
 interface AppointmentCardProps {
   appointment: AppointmentRow;
@@ -10,7 +10,9 @@ interface AppointmentCardProps {
 
 export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
   const tStatus = useTranslations("status");
+  const tType = useTranslations("appointmentType");
   const format = useFormatter();
+  const aptType = apt.type ?? "REGULAR_EXAMINATION";
 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
@@ -37,9 +39,15 @@ export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
             <span>{apt.clinic.name}</span>
             {apt.queueNumber && <span>#{apt.queueNumber}</span>}
           </div>
+          <Badge
+            variant="outline"
+            className={`mt-1.5 text-[10px] ${typeColors[aptType]}`}
+          >
+            {tType(aptType)}
+          </Badge>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span className="text-xs text-muted-foreground">
           {format.dateTime(new Date(apt.date), {
             year: "numeric",

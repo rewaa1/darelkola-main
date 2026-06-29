@@ -321,7 +321,11 @@ async function main() {
     clinicId: string,
     date: Date,
     status: "SCHEDULED" | "CHECKED_IN" | "COMPLETED",
-    extra: { notes?: string; queueNumber?: number } = {},
+    extra: {
+      notes?: string;
+      queueNumber?: number;
+      type?: "FAST_EXAMINATION" | "REGULAR_EXAMINATION" | "CONSULTATION";
+    } = {},
   ) => ({
     id,
     patientId,
@@ -335,16 +339,16 @@ async function main() {
 
   const appointments = [
     // Today — clinic 1
-    appt("apt-today-1", "patient-1", clinic1.id, today, "SCHEDULED", { notes: "Follow-up visit" }),
-    appt("apt-today-2", "patient-2", clinic1.id, today, "SCHEDULED", { notes: "First visit" }),
-    appt("apt-today-3", "patient-3", clinic1.id, today, "SCHEDULED"),
+    appt("apt-today-1", "patient-1", clinic1.id, today, "SCHEDULED", { notes: "Follow-up visit", type: "REGULAR_EXAMINATION" }),
+    appt("apt-today-2", "patient-2", clinic1.id, today, "SCHEDULED", { notes: "First visit", type: "FAST_EXAMINATION" }),
+    appt("apt-today-3", "patient-3", clinic1.id, today, "SCHEDULED", { type: "CONSULTATION" }),
     // Today — clinic 2
-    appt("apt-today-4", "patient-4", clinic2.id, today, "SCHEDULED", { notes: "Routine checkup" }),
-    appt("apt-today-5", "patient-5", clinic2.id, today, "SCHEDULED"),
+    appt("apt-today-4", "patient-4", clinic2.id, today, "SCHEDULED", { notes: "Routine checkup", type: "REGULAR_EXAMINATION" }),
+    appt("apt-today-5", "patient-5", clinic2.id, today, "SCHEDULED", { type: "FAST_EXAMINATION" }),
     // History
-    appt("apt-yesterday-1", "patient-1", clinic1.id, yesterday, "COMPLETED", { queueNumber: 1 }),
-    appt("apt-yesterday-2", "patient-2", clinic2.id, yesterday, "COMPLETED", { queueNumber: 1 }),
-    appt("apt-lastweek-1", "patient-1", clinic1.id, lastWeek, "COMPLETED", { queueNumber: 2, notes: "Initial consultation" }),
+    appt("apt-yesterday-1", "patient-1", clinic1.id, yesterday, "COMPLETED", { queueNumber: 1, type: "REGULAR_EXAMINATION" }),
+    appt("apt-yesterday-2", "patient-2", clinic2.id, yesterday, "COMPLETED", { queueNumber: 1, type: "CONSULTATION" }),
+    appt("apt-lastweek-1", "patient-1", clinic1.id, lastWeek, "COMPLETED", { queueNumber: 2, notes: "Initial consultation", type: "CONSULTATION" }),
   ];
 
   for (const a of appointments) {

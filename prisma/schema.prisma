@@ -306,6 +306,7 @@ model Appointment {
   clinicId     String            @map("clinic_id")
   date         DateTime          @db.Date
   status       AppointmentStatus @default(SCHEDULED)
+  type         AppointmentType   @default(REGULAR_EXAMINATION)
   queueNumber  Int?              @map("queue_number")
   notes        String?
   createdAt    DateTime          @default(now()) @map("created_at")
@@ -327,4 +328,10 @@ enum AppointmentStatus {
   COMPLETED
   NO_SHOW
   CANCELLED
+}
+
+enum AppointmentType {
+  FAST_EXAMINATION
+  REGULAR_EXAMINATION
+  CONSULTATION
 }

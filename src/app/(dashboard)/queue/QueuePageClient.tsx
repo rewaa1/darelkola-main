@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Appointment, Clinic } from "@prisma/client";
+import { Appointment, AppointmentType, Clinic } from "@prisma/client";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ export function QueuePageClient({
     patientName: string;
     patientPhone: string;
     date: Date;
+    type: AppointmentType;
     notes?: string;
     clinicId: string;
     patientId?: string;
@@ -77,6 +78,7 @@ export function QueuePageClient({
         patientId: formData.patientId,
         clinicId: formData.clinicId,
         date: formData.date.toISOString(),
+        type: formData.type,
         notes: formData.notes,
       });
       toast.success(tToast("booked"));

@@ -32,6 +32,7 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
+import { CardListSkeleton, DataTableSkeleton } from "@/components/skeletons";
 
 function useMedicationColumns(): ColumnDef<Medication>[] {
   const t = useTranslations("medications");
@@ -276,6 +277,8 @@ export function MedicationsPageClient() {
 
       {/* Mobile: Infinite scroll card list */}
       <div className="space-y-1.5 md:hidden">
+        {mobileLoading && mobileMeds.length === 0 && <CardListSkeleton />}
+
         {mobileMeds.map((med) => (
           <Card key={med.id} className="hover:bg-muted/50 transition-colors">
             <CardContent className="p-3 flex items-center justify-between">
@@ -310,18 +313,22 @@ export function MedicationsPageClient() {
 
       {/* Desktop: DataTable with server-side pagination */}
       <div className="hidden md:block">
-        <DataTable
-          columns={columns}
-          data={desktopData}
-          totalCount={desktopTotal}
-          page={desktopPage}
-          pageSize={desktopPageSize}
-          onPageChange={setDesktopPage}
-          onPageSizeChange={(size) => {
-            setDesktopPageSize(size);
-            setDesktopPage(1);
-          }}
-        />
+        {desktopLoading && desktopData.length === 0 ? (
+          <DataTableSkeleton columns={4} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={desktopData}
+            totalCount={desktopTotal}
+            page={desktopPage}
+            pageSize={desktopPageSize}
+            onPageChange={setDesktopPage}
+            onPageSizeChange={(size) => {
+              setDesktopPageSize(size);
+              setDesktopPage(1);
+            }}
+          />
+        )}
       </div>
     </div>
   );
