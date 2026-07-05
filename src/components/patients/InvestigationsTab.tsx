@@ -14,6 +14,11 @@ import {
   ResponsiveDialogTrigger as DialogTrigger,
 } from "@/components/ui/responsive-dialog";
 import {
+  Dialog as Lightbox,
+  DialogContent as LightboxContent,
+  DialogTitle as LightboxTitle,
+} from "@/components/ui/dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -68,6 +73,16 @@ function buildFileSchema(messages: {
   });
 }
 
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "avif", "bmp"];
+
+// Uploads are restricted to images and PDFs, so anything with an image
+// extension in its (UploadThing-preserved) name is safe to render inline.
+function isImageFile(fileName?: string | null, fileUrl?: string | null) {
+  const source = fileName || fileUrl || "";
+  const ext = source.split("?")[0].split(".").pop()?.toLowerCase();
+  return !!ext && IMAGE_EXTENSIONS.includes(ext);
+}
+
 interface InvestigationsTabProps {
   patientId: string;
   investigations: Investigation[];
@@ -97,6 +112,9 @@ export function InvestigationsTab({
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const progressToastId = useRef<string | number | null>(null);
+  const [preview, setPreview] = useState<{ url: string; name: string } | null>(
+    null,
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -151,7 +169,8 @@ export function InvestigationsTab({
   };
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("title")}</CardTitle>
         <Dialog
@@ -244,7 +263,16 @@ export function InvestigationsTab({
                 <label className="text-sm font-medium">{t("attachment")}</label>
                 {fileName ? (
                   <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    {isImageFile(fileName, fileUrl) && fileUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={fileUrl}
+                        alt={fileName}
+                        className="h-10 w-10 shrink-0 rounded-md border object-cover"
+                      />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    )}
                     <span className="text-sm truncate flex-1">{fileName}</span>
                     <Button
                       variant="ghost"
@@ -362,6 +390,7 @@ export function InvestigationsTab({
                 <TableHead>{t("date")}</TableHead>
                 <TableHead>{t("investigation")}</TableHead>
                 <TableHead>{t("report")}</TableHead>
+                <TableHead>{t("attachment")}</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
@@ -376,20 +405,43 @@ export function InvestigationsTab({
                     })}
                   </TableCell>
                   <TableCell>{inv.invest}</TableCell>
+                  <TableCell>{inv.report || "—"}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {inv.report || "—"}
-                      {inv.fileUrl && (
+                    {inv.fileUrl ? (
+                      isImageFile(inv.fileName, inv.fileUrl) ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreview({
+                              url: inv.fileUrl!,
+                              name: inv.fileName || t("attachment"),
+                            })
+                          }
+                          title={t("viewImage")}
+                          className="group block h-11 w-11 overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={inv.fileUrl}
+                            alt={inv.fileName || t("attachment")}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        </button>
+                      ) : (
                         <a
                           href={inv.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           title={inv.fileName || t("viewFile")}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-md border bg-muted text-primary transition-colors hover:bg-accent"
                         >
-                          <FileText className="h-4 w-4 text-primary hover:text-primary/80" />
+                          <FileText className="h-5 w-5" />
                         </a>
-                      )}
-                    </div>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -407,6 +459,42 @@ export function InvestigationsTab({
           </Table>
         )}
       </CardContent>
-    </Card>
+      </Card>
+
+      {/* Image lightbox */}
+      <Lightbox
+        open={!!preview}
+        onOpenChange={(open) => !open && setPreview(null)}
+      >
+        <LightboxContent className="p-3 sm:max-w-4xl sm:p-4">
+          <LightboxTitle className="sr-only">
+            {preview?.name ?? t("attachment")}
+          </LightboxTitle>
+          {preview && (
+            <div className="flex flex-col gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview.url}
+                alt={preview.name}
+                className="max-h-[75vh] w-full rounded-md object-contain"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm text-muted-foreground">
+                  {preview.name}
+                </span>
+                <a
+                  href={preview.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-sm text-primary hover:underline"
+                >
+                  {t("openOriginal")}
+                </a>
+              </div>
+            </div>
+          )}
+        </LightboxContent>
+      </Lightbox>
+    </>
   );
 }

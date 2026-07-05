@@ -14,7 +14,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
@@ -102,14 +101,6 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-muted-foreground">
-          {t("noAccount")}{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            {t("signUp")}
-          </Link>
-        </p>
-      </CardFooter>
     </Card>
   );
 }

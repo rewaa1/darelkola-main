@@ -13,6 +13,8 @@ export type AppointmentRow = {
   notes: string | null;
   clinic: { name: string };
   patient: { id: string } | null;
+  bookedBy: { name: string } | null;
+  checkedInBy: { name: string } | null;
 };
 
 export const statusColors: Record<AppointmentStatus, string> = {

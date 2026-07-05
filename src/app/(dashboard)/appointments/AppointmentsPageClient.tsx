@@ -92,6 +92,7 @@ export function AppointmentsPageClient({
     notes?: string;
     clinicId: string;
     patientId?: string;
+    bookedById?: string;
   }) => {
     try {
       await bookAppointment({
@@ -99,9 +100,12 @@ export function AppointmentsPageClient({
         patientPhone: formData.patientPhone,
         patientId: formData.patientId,
         clinicId: formData.clinicId,
-        date: formData.date.toISOString(),
+        // Send the picked calendar day (local), not a UTC instant, so the
+        // stored date matches the day the user selected.
+        date: format(formData.date, "yyyy-MM-dd"),
         type: formData.type,
         notes: formData.notes,
+        bookedById: formData.bookedById,
       });
       toast.success(tToast("booked"));
       setRefreshNonce((n) => n + 1);

@@ -62,6 +62,7 @@ interface CheckInRegistrationDialogProps {
   onOpenChange: (open: boolean) => void;
   prefillName: string;
   prefillPhone: string;
+  registeredById?: string;
   onSuccess: (patientId: string) => void;
 }
 
@@ -70,6 +71,7 @@ export function CheckInRegistrationDialog({
   onOpenChange,
   prefillName,
   prefillPhone,
+  registeredById,
   onSuccess,
 }: CheckInRegistrationDialogProps) {
   const t = useTranslations("checkInDialog");
@@ -116,6 +118,7 @@ export function CheckInRegistrationDialog({
         offsprings: data.offsprings,
         occupation: data.occupation,
         residence: data.residence,
+        registeredById,
       });
       toast.success(t("registeredSuccess"));
       onSuccess(patient.id);

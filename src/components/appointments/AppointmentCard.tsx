@@ -11,6 +11,7 @@ interface AppointmentCardProps {
 export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
   const tStatus = useTranslations("status");
   const tType = useTranslations("appointmentType");
+  const tCols = useTranslations("appointments.columns");
   const format = useFormatter();
   const aptType = apt.type ?? "REGULAR_EXAMINATION";
 
@@ -45,6 +46,16 @@ export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
           >
             {tType(aptType)}
           </Badge>
+          {(apt.bookedBy || apt.checkedInBy) && (
+            <div className="mt-1 text-[10px] text-muted-foreground space-y-0.5">
+              {apt.bookedBy && (
+                <div>{tCols("bookedBy", { name: apt.bookedBy.name })}</div>
+              )}
+              {apt.checkedInBy && (
+                <div>{tCols("checkedInBy", { name: apt.checkedInBy.name })}</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">

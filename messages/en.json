@@ -70,6 +70,19 @@
     "DOCTOR": "Doctor",
     "RECEPTIONIST": "Receptionist"
   },
+  "medForms": {
+    "tablet": "Tablet",
+    "capsule": "Capsule",
+    "syrup": "Syrup",
+    "suspension": "Suspension",
+    "injection": "Injection",
+    "cream": "Cream",
+    "ointment": "Ointment",
+    "drops": "Drops",
+    "inhaler": "Inhaler",
+    "suppository": "Suppository",
+    "sachet": "Sachet"
+  },
   "dashboard": {
     "welcome": "Welcome back, {name}",
     "totalPatients": "Total Patients",
@@ -112,7 +125,37 @@
     "clinicDeleted": "Clinic deleted",
     "clinicDeleteFailed": "Failed to delete clinic",
     "userDeleted": "User deleted",
-    "userDeleteFailed": "Failed to delete user"
+    "userDeleteFailed": "Failed to delete user",
+    "addUser": "Add User",
+    "userName": "Name",
+    "userNamePlaceholder": "Dr. John Smith",
+    "userEmailPlaceholder": "user@clinic.com",
+    "userPassword": "Password",
+    "userPasswordHint": "At least 6 characters",
+    "userRole": "Role",
+    "selectRole": "Select role",
+    "userCreated": "User created",
+    "userCreateFailed": "Failed to create user",
+    "receptionists": "Receptionists",
+    "receptionistsSubtitle": "Names shown when a receptionist performs an action. Only doctors can edit these.",
+    "noReceptionists": "No receptionists yet.",
+    "addReceptionist": "Add Receptionist",
+    "receptionistName": "Name",
+    "receptionistNamePlaceholder": "e.g. Mona",
+    "active": "Active",
+    "inactive": "Inactive",
+    "receptionistCreated": "Receptionist added",
+    "receptionistCreateFailed": "Failed to add receptionist",
+    "receptionistUpdated": "Receptionist updated",
+    "receptionistUpdateFailed": "Failed to update receptionist",
+    "receptionistEnabled": "Receptionist enabled",
+    "receptionistDisabled": "Receptionist disabled"
+  },
+  "receptionistPicker": {
+    "title": "Who is performing this action?",
+    "subtitle": "Select the receptionist so the action can be tracked.",
+    "confirm": "Continue",
+    "cancel": "Cancel"
   },
   "tabs": {
     "personal": "Personal",
@@ -142,6 +185,9 @@
     "noCompleted": "No completed appointments yet",
     "new": "New",
     "checkIn": "Check In",
+    "checkedInAt": "Checked in {time}",
+    "byReceptionist": "by {name}",
+    "bookedByReceptionist": "Booked by {name}",
     "complete": "Complete",
     "noShow": "No Show",
     "withDoctorNow": "With Doctor Now",
@@ -316,7 +362,9 @@
       "invalidFile": "Invalid file",
       "fileTooLarge": "File size must be under 20MB",
       "fileTypeError": "Only images (JPEG, PNG, WebP, GIF) and PDFs are allowed",
-      "viewFile": "View file"
+      "viewFile": "View file",
+      "viewImage": "View image",
+      "openOriginal": "Open original"
     },
     "sessionsTab": {
       "title": "Sessions",
@@ -370,6 +418,11 @@
     "activeCount": "{count} active",
     "searchMedPlaceholder": "Search medication or type to add new...",
     "createMed": "+ Create \"{name}\"",
+    "createAndAdd": "Create & Add",
+    "cancelCreate": "Cancel",
+    "form": "Form",
+    "selectForm": "Select form",
+    "dosagePlaceholder": "e.g. 500mg",
     "active": "Active",
     "inactive": "Inactive",
     "dosage": "Dosage",
@@ -426,7 +479,10 @@
       "clinic": "Clinic",
       "date": "Date",
       "type": "Type",
-      "status": "Status"
+      "status": "Status",
+      "handledBy": "Handled by",
+      "bookedBy": "Booked by {name}",
+      "checkedInBy": "Checked in by {name}"
     }
   },
   "booking": {
@@ -486,7 +542,8 @@
       "sex": "Sex",
       "phone": "Phone",
       "registered": "Registered"
-    }
+    },
+    "registeredBy": "Registered by {name}"
   },
   "medications": {
     "title": "Medications",

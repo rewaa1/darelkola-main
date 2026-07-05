@@ -39,20 +39,40 @@ enum UserRole {
   RECEPTIONIST
 }
 
+// A named receptionist used purely to attribute actions (booking, patient
+// registration, check-in). Distinct from a login User: the reception desk
+// shares one login, and each action records which receptionist performed it.
+// Managed by doctors in Settings. Deactivated (not deleted) to keep history.
+model Receptionist {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bookedAppointments    Appointment[] @relation("BookedBy")
+  checkedInAppointments Appointment[] @relation("CheckedInBy")
+  registeredPatients    Patient[]     @relation("RegisteredBy")
+
+  @@map("receptionists")
+}
+
 // ===========================================
 // Patient Management
 // ===========================================
 
 model Patient {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  registeredById String?  @map("registered_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   personalHistory     PersonalHistory?
   previousMedications PreviousMedication[]
   investigations      Investigation[]
   sessions            Session[]
   appointments        Appointment[]
+  registeredBy        Receptionist?        @relation("RegisteredBy", fields: [registeredById], references: [id])
 
   @@map("patients")
 }
@@ -307,13 +327,18 @@ model Appointment {
   date         DateTime          @db.Date
   status       AppointmentStatus @default(SCHEDULED)
   type         AppointmentType   @default(REGULAR_EXAMINATION)
-  queueNumber  Int?              @map("queue_number")
+  queueNumber   Int?              @map("queue_number")
+  checkedInAt   DateTime?         @map("checked_in_at")
+  bookedById    String?           @map("booked_by_id")
+  checkedInById String?           @map("checked_in_by_id")
   notes        String?
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
-  clinic  Clinic   @relation(fields: [clinicId], references: [id])
-  patient Patient? @relation(fields: [patientId], references: [id])
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  patient     Patient?      @relation(fields: [patientId], references: [id])
+  bookedBy    Receptionist? @relation("BookedBy", fields: [bookedById], references: [id])
+  checkedInBy Receptionist? @relation("CheckedInBy", fields: [checkedInById], references: [id])
 
   @@unique([patientPhone, date, clinicId])
   @@index([clinicId, date, status])

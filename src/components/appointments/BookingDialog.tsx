@@ -41,6 +41,7 @@ import {
 import { CalendarIcon, Plus, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { searchPatients } from "@/actions/patients";
+import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 
 type PatientWithHistory = Patient & {
   personalHistory: PersonalHistory | null;
@@ -70,7 +71,9 @@ type BookingFormData = z.infer<ReturnType<typeof buildBookingSchema>>;
 
 interface BookingDialogProps {
   clinics: Clinic[];
-  onBook: (data: BookingFormData & { patientId?: string }) => Promise<void>;
+  onBook: (
+    data: BookingFormData & { patientId?: string; bookedById?: string },
+  ) => Promise<void>;
 }
 
 export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
@@ -79,6 +82,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
   const tType = useTranslations("appointmentType");
   const tv = useTranslations("booking.validation");
   const format = useFormatter();
+  const { requireReceptionist } = useReceptionist();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -147,11 +151,16 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
   };
 
   const handleSubmit = async (data: BookingFormData) => {
+    // Ask which receptionist is booking (no-op for doctors / when none exist).
+    const picked = await requireReceptionist();
+    if (!picked.ok) return; // receptionist cancelled the picker
+
     setIsLoading(true);
     try {
       await onBook({
         ...data,
         patientId: selectedPatientId ?? undefined,
+        bookedById: picked.receptionistId ?? undefined,
       });
       form.reset();
       setPhoneSearch("");
@@ -275,7 +284,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
                         <UserCheck className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600" />
                       )}
                       {showDropdown && searchResults.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto overscroll-contain">
                           {searchResults.map((patient) => (
                             <button
                               key={patient.id}

@@ -1,21 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { Appointment, AppointmentStatus } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, GripVertical, Check, X, UserCircle } from "lucide-react";
+import { Phone, GripVertical, Check, X, UserCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PatientHistoryDialog } from "./PatientHistoryDialog";
 import { CheckInRegistrationDialog } from "./CheckInRegistrationDialog";
 import { checkInWithPatient, checkInPatient } from "@/actions/appointments";
 import { typeColors } from "@/components/appointments/appointment-types";
+import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 import { toast } from "sonner";
 
 interface QueueCardProps {
-  appointment: Appointment;
+  appointment: Appointment & {
+    bookedBy?: { name: string } | null;
+    checkedInBy?: { name: string } | null;
+  };
   isDragging?: boolean;
   onCheckIn?: () => void;
   onComplete?: () => void;
@@ -46,31 +50,44 @@ export function QueueCard({
   const tStatus = useTranslations("queueStatus");
   const tType = useTranslations("appointmentType");
   const tToast = useTranslations("appointmentsToast");
+  const format = useFormatter();
+  const { requireReceptionist } = useReceptionist();
   const aptType = appointment.type ?? "REGULAR_EXAMINATION";
   const [showRegistration, setShowRegistration] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  // The receptionist chosen for this check-in — reused for the registration
+  // branch so both the new patient and the check-in are attributed to them.
+  const [actingReceptionistId, setActingReceptionistId] = useState<
+    string | undefined
+  >(undefined);
 
   const handleCheckInClick = async () => {
+    const picked = await requireReceptionist();
+    if (!picked.ok) return; // receptionist cancelled the picker
+    const receptionistId = picked.receptionistId ?? undefined;
+    setActingReceptionistId(receptionistId);
+
     if (!appointment.patientId) {
       setShowRegistration(true);
-    } else {
-      setIsCheckingIn(true);
-      try {
-        await checkInPatient(appointment.id);
-        toast.success(tToast("checkedIn"));
-        onCheckIn?.();
-      } catch (error) {
-        toast.error((error as Error).message);
-      } finally {
-        setIsCheckingIn(false);
-      }
+      return;
+    }
+
+    setIsCheckingIn(true);
+    try {
+      await checkInPatient(appointment.id, receptionistId);
+      toast.success(tToast("checkedIn"));
+      onCheckIn?.();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setIsCheckingIn(false);
     }
   };
 
   const handleRegistrationSuccess = async (patientId: string) => {
     setIsCheckingIn(true);
     try {
-      await checkInWithPatient(appointment.id, patientId);
+      await checkInWithPatient(appointment.id, patientId, actingReceptionistId);
       toast.success(tToast("registeredCheckedIn"));
       onCheckIn?.();
     } catch (error) {
@@ -128,6 +145,34 @@ export function QueueCard({
                 <Phone className="h-3 w-3 shrink-0" />
                 <span>{appointment.patientPhone}</span>
               </div>
+              {appointment.bookedBy?.name && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <UserCircle className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {t("bookedByReceptionist", {
+                      name: appointment.bookedBy.name,
+                    })}
+                  </span>
+                </div>
+              )}
+              {appointment.checkedInAt && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span>
+                    {t("checkedInAt", {
+                      time: format.dateTime(new Date(appointment.checkedInAt), {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                    })}
+                  </span>
+                  {appointment.checkedInBy?.name && (
+                    <span className="truncate">
+                      · {t("byReceptionist", { name: appointment.checkedInBy.name })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-1 shrink-0">
@@ -219,6 +264,7 @@ export function QueueCard({
         onOpenChange={setShowRegistration}
         prefillName={appointment.patientName}
         prefillPhone={appointment.patientPhone}
+        registeredById={actingReceptionistId}
         onSuccess={handleRegistrationSuccess}
       />
     </>

@@ -134,10 +134,14 @@ export function AddSessionForm({
     setMedResults([]);
   };
 
-  const addNewMed = async () => {
+  const addNewMed = async (dosage: string, form: string) => {
     if (!medSearch) return;
     try {
-      const med = await createMedication({ name: medSearch });
+      const med = await createMedication({
+        name: medSearch,
+        dosage: dosage || undefined,
+        form: form || undefined,
+      });
       addMed(med);
     } catch {
       toast.error(t("createMedFailed"));

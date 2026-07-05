@@ -61,23 +61,38 @@ const { data, error } = await supabase.auth.signUp({
 
 Create a trigger to sync Supabase Auth users to our `users` table:
 
+> **Important:** the function must `SET search_path = public` and the enum
+> cast must be schema-qualified (`public."UserRole"`). The trigger runs as
+> `SECURITY DEFINER` invoked by the `supabase_auth_admin` role, whose search
+> path does **not** include `public`. Without these, the unqualified enum type
+> cannot be resolved and every signup / admin user creation fails with
+> `Database error creating new user`.
+
 ```sql
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   INSERT INTO public.users (id, email, name, role, created_at, updated_at)
   VALUES (
-    NEW.id,
+    NEW.id::text,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', 'User'),
-    COALESCE((NEW.raw_user_meta_data->>'role')::"UserRole", 'RECEPTIONIST'),
+    COALESCE(
+      (NEW.raw_user_meta_data->>'role')::public."UserRole",
+      'RECEPTIONIST'::public."UserRole"
+    ),
     NOW(),
     NOW()
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Trigger on auth.users insert
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

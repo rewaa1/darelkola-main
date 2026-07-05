@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/lib/auth";
+import { getActiveReceptionists } from "@/actions/receptionists";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ReceptionistProvider } from "@/components/receptionist/ReceptionistProvider";
 
 export default async function DashboardLayout({
   children,
@@ -13,6 +15,8 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const receptionists = await getActiveReceptionists();
+
   return (
     <DashboardShell
       user={{
@@ -21,7 +25,12 @@ export default async function DashboardLayout({
         role: user.role || "RECEPTIONIST",
       }}
     >
-      {children}
+      <ReceptionistProvider
+        promptRequired={user.role === "RECEPTIONIST"}
+        receptionists={receptionists}
+      >
+        {children}
+      </ReceptionistProvider>
     </DashboardShell>
   );
 }

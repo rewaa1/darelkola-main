@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Appointment, AppointmentType, Clinic } from "@prisma/client";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export function QueuePageClient({
     notes?: string;
     clinicId: string;
     patientId?: string;
+    bookedById?: string;
   }) => {
     try {
       await bookAppointment({
@@ -77,9 +79,12 @@ export function QueuePageClient({
         patientPhone: formData.patientPhone,
         patientId: formData.patientId,
         clinicId: formData.clinicId,
-        date: formData.date.toISOString(),
+        // Send the picked calendar day (local), not a UTC instant, so the
+        // stored date matches the day the user selected.
+        date: format(formData.date, "yyyy-MM-dd"),
         type: formData.type,
         notes: formData.notes,
+        bookedById: formData.bookedById,
       });
       toast.success(tToast("booked"));
       refreshQueue(formData.clinicId);

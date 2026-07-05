@@ -70,6 +70,19 @@
     "DOCTOR": "طبيب",
     "RECEPTIONIST": "موظف استقبال"
   },
+  "medForms": {
+    "tablet": "أقراص",
+    "capsule": "كبسولات",
+    "syrup": "شراب",
+    "suspension": "معلّق",
+    "injection": "حقن",
+    "cream": "كريم",
+    "ointment": "مرهم",
+    "drops": "نقط",
+    "inhaler": "بخّاخ",
+    "suppository": "لبوس",
+    "sachet": "أكياس"
+  },
   "dashboard": {
     "welcome": "مرحبًا بعودتك، {name}",
     "totalPatients": "إجمالي المرضى",
@@ -112,7 +125,37 @@
     "clinicDeleted": "تم حذف العيادة",
     "clinicDeleteFailed": "فشل حذف العيادة",
     "userDeleted": "تم حذف المستخدم",
-    "userDeleteFailed": "فشل حذف المستخدم"
+    "userDeleteFailed": "فشل حذف المستخدم",
+    "addUser": "إضافة مستخدم",
+    "userName": "الاسم",
+    "userNamePlaceholder": "د. أحمد محمد",
+    "userEmailPlaceholder": "user@clinic.com",
+    "userPassword": "كلمة المرور",
+    "userPasswordHint": "6 أحرف على الأقل",
+    "userRole": "الدور",
+    "selectRole": "اختر الدور",
+    "userCreated": "تم إنشاء المستخدم",
+    "userCreateFailed": "فشل إنشاء المستخدم",
+    "receptionists": "موظفو الاستقبال",
+    "receptionistsSubtitle": "الأسماء التي تظهر عند قيام موظف الاستقبال بأي إجراء. يمكن للطبيب فقط تعديلها.",
+    "noReceptionists": "لا يوجد موظفو استقبال بعد.",
+    "addReceptionist": "إضافة موظف استقبال",
+    "receptionistName": "الاسم",
+    "receptionistNamePlaceholder": "مثال: منى",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "receptionistCreated": "تمت إضافة موظف الاستقبال",
+    "receptionistCreateFailed": "فشل إضافة موظف الاستقبال",
+    "receptionistUpdated": "تم تحديث موظف الاستقبال",
+    "receptionistUpdateFailed": "فشل تحديث موظف الاستقبال",
+    "receptionistEnabled": "تم تفعيل موظف الاستقبال",
+    "receptionistDisabled": "تم تعطيل موظف الاستقبال"
+  },
+  "receptionistPicker": {
+    "title": "من الذي يقوم بهذا الإجراء؟",
+    "subtitle": "اختر موظف الاستقبال حتى يتم تتبّع الإجراء.",
+    "confirm": "متابعة",
+    "cancel": "إلغاء"
   },
   "tabs": {
     "personal": "البيانات الشخصية",
@@ -142,6 +185,9 @@
     "noCompleted": "لا توجد مواعيد مكتملة بعد",
     "new": "جديد",
     "checkIn": "تسجيل الحضور",
+    "checkedInAt": "سجّل الحضور {time}",
+    "byReceptionist": "بواسطة {name}",
+    "bookedByReceptionist": "حجزه {name}",
     "complete": "إنهاء",
     "noShow": "لم يحضر",
     "withDoctorNow": "مع الطبيب الآن",
@@ -316,7 +362,9 @@
       "invalidFile": "ملف غير صالح",
       "fileTooLarge": "يجب أن يكون حجم الملف أقل من 20 ميجابايت",
       "fileTypeError": "يُسمح فقط بالصور (JPEG، PNG، WebP، GIF) وملفات PDF",
-      "viewFile": "عرض الملف"
+      "viewFile": "عرض الملف",
+      "viewImage": "عرض الصورة",
+      "openOriginal": "فتح الأصل"
     },
     "sessionsTab": {
       "title": "الجلسات",
@@ -370,6 +418,11 @@
     "activeCount": "{count} فعّال",
     "searchMedPlaceholder": "ابحث عن دواء أو اكتب لإضافة جديد...",
     "createMed": "+ إنشاء \"{name}\"",
+    "createAndAdd": "إنشاء وإضافة",
+    "cancelCreate": "إلغاء",
+    "form": "الشكل الدوائي",
+    "selectForm": "اختر الشكل",
+    "dosagePlaceholder": "مثال: 500 مجم",
     "active": "فعّال",
     "inactive": "غير فعّال",
     "dosage": "الجرعة",
@@ -426,7 +479,10 @@
       "clinic": "العيادة",
       "date": "التاريخ",
       "type": "النوع",
-      "status": "الحالة"
+      "status": "الحالة",
+      "handledBy": "بواسطة",
+      "bookedBy": "حجز الموعد {name}",
+      "checkedInBy": "سجّل الحضور {name}"
     }
   },
   "booking": {
@@ -469,7 +525,8 @@
       "sex": "النوع",
       "phone": "الهاتف",
       "registered": "تاريخ التسجيل"
-    }
+    },
+    "registeredBy": "سجّله {name}"
   },
   "medications": {
     "title": "الأدوية",

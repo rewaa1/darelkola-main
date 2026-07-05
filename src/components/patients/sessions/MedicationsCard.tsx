@@ -1,11 +1,20 @@
+import { useState } from "react";
 import { Medication } from "@prisma/client";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Trash2, Pill } from "lucide-react";
 import { MedEntry } from "./types";
+import { MEDICATION_FORMS } from "./medication-forms";
 
 interface MedicationsCardProps {
   selectedMeds: MedEntry[];
@@ -13,7 +22,7 @@ interface MedicationsCardProps {
   medResults: Medication[];
   onSearch: (query: string) => void;
   onAddMed: (med: Medication) => void;
-  onAddNewMed: () => void;
+  onAddNewMed: (dosage: string, form: string) => void;
   onRemoveMed: (index: number) => void;
   onUpdateMed: (
     index: number,
@@ -33,6 +42,33 @@ export function MedicationsCard({
   onUpdateMed,
 }: MedicationsCardProps) {
   const t = useTranslations("session");
+  const tForms = useTranslations("medForms");
+
+  // Inline "create new medication" panel state
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newDosage, setNewDosage] = useState("");
+  const [newForm, setNewForm] = useState("");
+
+  const startCreate = () => {
+    setNewDosage("");
+    setNewForm("");
+    setCreatingNew(true);
+  };
+
+  const confirmCreate = () => {
+    onAddNewMed(newDosage.trim(), newForm);
+    setCreatingNew(false);
+    setNewDosage("");
+    setNewForm("");
+  };
+
+  const cancelCreate = () => {
+    setCreatingNew(false);
+    setNewDosage("");
+    setNewForm("");
+    onSearch("");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -55,34 +91,87 @@ export function MedicationsCard({
             placeholder={t("searchMedPlaceholder")}
             value={medSearch}
             onChange={(e) => onSearch(e.target.value)}
+            disabled={creatingNew}
           />
-          {(medResults.length > 0 || medSearch.length >= 2) && (
-            <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-              {medResults.map((med) => (
-                <button
-                  key={med.id}
-                  className="w-full text-start px-3 py-2 text-sm hover:bg-muted"
-                  onClick={() => onAddMed(med)}
-                >
-                  {med.name}
-                  {med.dosage && (
-                    <span className="text-muted-foreground ms-1">
-                      ({med.dosage})
-                    </span>
-                  )}
-                </button>
-              ))}
-              {medResults.length === 0 && medSearch.length >= 2 && (
-                <button
-                  className="w-full text-start px-3 py-2 text-sm hover:bg-muted text-primary"
-                  onClick={onAddNewMed}
-                >
-                  {t("createMed", { name: medSearch })}
-                </button>
-              )}
-            </div>
-          )}
+          {!creatingNew &&
+            (medResults.length > 0 || medSearch.length >= 2) && (
+              <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                {medResults.map((med) => (
+                  <button
+                    key={med.id}
+                    className="w-full text-start px-3 py-2 text-sm hover:bg-muted"
+                    onClick={() => onAddMed(med)}
+                  >
+                    {med.name}
+                    {med.dosage && (
+                      <span className="text-muted-foreground ms-1">
+                        ({med.dosage})
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {medResults.length === 0 && medSearch.length >= 2 && (
+                  <button
+                    className="w-full text-start px-3 py-2 text-sm hover:bg-muted text-primary"
+                    onClick={startCreate}
+                  >
+                    {t("createMed", { name: medSearch })}
+                  </button>
+                )}
+              </div>
+            )}
         </div>
+
+        {/* Inline new-medication panel — captures dosage & form so they are
+            saved on the medication itself, not just this session */}
+        {creatingNew && (
+          <div className="border border-dashed rounded-lg p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">
+                {t("createMed", { name: medSearch })}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  {t("dosage")}
+                </label>
+                <Input
+                  placeholder={t("dosagePlaceholder")}
+                  value={newDosage}
+                  onChange={(e) => setNewDosage(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  {t("form")}
+                </label>
+                <Select value={newForm} onValueChange={setNewForm}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={t("selectForm")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEDICATION_FORMS.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {tForms(f)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={confirmCreate}>
+                {t("createAndAdd")}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={cancelCreate}>
+                {t("cancelCreate")}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Medication list */}
         {selectedMeds.length > 0 && (

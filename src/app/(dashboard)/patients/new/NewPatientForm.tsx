@@ -34,6 +34,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { createPatient } from "@/actions/patients";
+import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 
 function buildPatientSchema(messages: {
   nameMin: string;
@@ -62,6 +63,7 @@ export function NewPatientForm() {
   const tMarital = useTranslations("patient.marital");
   const tValidation = useTranslations("patient.validation");
   const tCommon = useTranslations("common");
+  const { requireReceptionist } = useReceptionist();
   const [isLoading, setIsLoading] = useState(false);
 
   const patientSchema = useMemo(
@@ -86,6 +88,9 @@ export function NewPatientForm() {
   });
 
   const handleSubmit = async (data: PatientFormData) => {
+    const picked = await requireReceptionist();
+    if (!picked.ok) return; // receptionist cancelled the picker
+
     setIsLoading(true);
     try {
       const patient = await createPatient({
@@ -97,6 +102,7 @@ export function NewPatientForm() {
         offsprings: data.offsprings,
         occupation: data.occupation,
         residence: data.residence,
+        registeredById: picked.receptionistId ?? undefined,
       });
       toast.success(t("success"));
       router.push(`/patients/${patient.id}`);

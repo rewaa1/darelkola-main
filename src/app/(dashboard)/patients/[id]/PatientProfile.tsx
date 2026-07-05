@@ -39,6 +39,7 @@ type SessionWithRelations = Session & {
 
 type PatientWithRelations = Patient & {
   personalHistory: PersonalHistory | null;
+  registeredBy: { name: string } | null;
   previousMedications: PreviousMedication[];
   investigations: Investigation[];
   sessions: SessionWithRelations[];
@@ -108,6 +109,11 @@ export function PatientProfile({ patient, clinics }: PatientProfileProps) {
                   </Badge>
                 )}
               </div>
+              {patient.registeredBy?.name && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {t("registeredBy", { name: patient.registeredBy.name })}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>

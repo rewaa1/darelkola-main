@@ -149,6 +149,24 @@ export function useAppointmentColumns(): ColumnDef<AppointmentRow>[] {
       ),
     },
     {
+      id: "handledBy",
+      header: () => t("handledBy"),
+      cell: ({ row }) => {
+        const { bookedBy, checkedInBy } = row.original;
+        if (!bookedBy && !checkedInBy) {
+          return <span className="text-xs text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="text-xs text-muted-foreground space-y-0.5">
+            {bookedBy && <div>{t("bookedBy", { name: bookedBy.name })}</div>}
+            {checkedInBy && (
+              <div>{t("checkedInBy", { name: checkedInBy.name })}</div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       id: "actions",
       cell: ({ row }) => <DeleteButton appointmentId={row.original.id} />,
     },

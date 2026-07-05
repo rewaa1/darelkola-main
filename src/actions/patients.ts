@@ -17,6 +17,7 @@ export type CreatePatientInput = {
   offsprings?: number;
   occupation?: string;
   residence?: string;
+  registeredById?: string; // receptionist who registered the patient
 };
 
 // ===========================================
@@ -35,6 +36,7 @@ export async function createPatient(data: CreatePatientInput) {
 
   const patient = await prisma.patient.create({
     data: {
+      registeredById: data.registeredById,
       personalHistory: {
         create: {
           fullName: data.fullName,
@@ -158,6 +160,7 @@ export async function getPatient(patientId: string) {
     where: { id: patientId },
     include: {
       personalHistory: true,
+      registeredBy: { select: { name: true } },
       previousMedications: true,
       investigations: {
         orderBy: { date: "desc" },
