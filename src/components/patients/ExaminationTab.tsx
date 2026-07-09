@@ -58,11 +58,20 @@ export function ExaminationTab({ patientId, history }: ExaminationTabProps) {
     comments: history?.comments || "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Drop this field's stale error as soon as it is edited. Without this the
+    // message sits there contradicting the value the user just corrected,
+    // since errors are otherwise only recomputed on save.
+    setErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSave = () => {
     // Validate vitals

@@ -1,12 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Appointment, AppointmentStatus } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, GripVertical, Check, X, UserCircle, Clock } from "lucide-react";
+import {
+  Phone,
+  GripVertical,
+  Check,
+  X,
+  UserCircle,
+  Clock,
+  FlaskConical,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PatientHistoryDialog } from "./PatientHistoryDialog";
 import { CheckInRegistrationDialog } from "./CheckInRegistrationDialog";
@@ -223,6 +232,22 @@ export function QueueCard({
                 >
                   <Check className="h-4 w-4 me-1.5" />
                   {t("complete")}
+                </Button>
+              )}
+
+              {/* Straight to the Lab Results tab — reception opens this to key
+                  in the sheets the patient walked in with. */}
+              {appointment.patientId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  className="flex-1 sm:flex-none"
+                >
+                  <Link href={`/patients/${appointment.patientId}?tab=labResults`}>
+                    <FlaskConical className="h-4 w-4 me-1.5" />
+                    {t("labResults")}
+                  </Link>
                 </Button>
               )}
 

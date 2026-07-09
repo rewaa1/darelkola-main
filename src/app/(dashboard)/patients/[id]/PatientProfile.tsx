@@ -49,12 +49,38 @@ type PatientWithRelations = Patient & {
   appointments: (Appointment & { clinic: Clinic })[];
 };
 
+const PATIENT_TABS = [
+  "personal",
+  "history",
+  "examination",
+  "sessions",
+  "medications",
+  "labResults",
+  "investigations",
+  "appointments",
+] as const;
+
+type PatientTab = (typeof PATIENT_TABS)[number];
+
+function resolveTab(tab: string | undefined): PatientTab {
+  // Anything unrecognised in ?tab= would render an empty panel, so fall back.
+  return PATIENT_TABS.includes(tab as PatientTab)
+    ? (tab as PatientTab)
+    : "personal";
+}
+
 interface PatientProfileProps {
   patient: PatientWithRelations;
   clinics: { id: string; name: string }[];
+  /** Tab to open on, from `?tab=` — lets the queue deep-link to lab results. */
+  initialTab?: string;
 }
 
-export function PatientProfile({ patient, clinics }: PatientProfileProps) {
+export function PatientProfile({
+  patient,
+  clinics,
+  initialTab,
+}: PatientProfileProps) {
   const t = useTranslations("patients");
   const tTabs = useTranslations("tabs");
   const tPatient = useTranslations("patient");
@@ -123,7 +149,7 @@ export function PatientProfile({ patient, clinics }: PatientProfileProps) {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="personal" className="space-y-4">
+      <Tabs defaultValue={resolveTab(initialTab)} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="personal">{tTabs("personal")}</TabsTrigger>
           <TabsTrigger value="history">{tTabs("history")}</TabsTrigger>

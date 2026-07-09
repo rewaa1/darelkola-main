@@ -190,6 +190,7 @@
     "noCompleted": "No completed appointments yet",
     "new": "New",
     "checkIn": "Check In",
+    "labResults": "Lab Results",
     "checkedInAt": "Checked in {time}",
     "byReceptionist": "by {name}",
     "bookedByReceptionist": "Booked by {name}",

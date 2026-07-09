@@ -89,6 +89,22 @@ export function AddSessionForm({
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Errors are only recomputed on submit, so a stale message would otherwise
+  // keep contradicting a value the user has already corrected.
+  const clearError = (field: string) =>
+    setErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+
+  const withClear =
+    (field: string, set: (v: string) => void) => (value: string) => {
+      set(value);
+      clearError(field);
+    };
+
   // Medications — pre-populated from all past sessions
   const [selectedMeds, setSelectedMeds] = useState<MedEntry[]>(() =>
     collectPatientMeds(sessions),
@@ -230,7 +246,7 @@ export function AddSessionForm({
           <label className="text-sm font-medium whitespace-nowrap">
             {t("clinic")} *
           </label>
-          <Select value={clinicId} onValueChange={setClinicId}>
+          <Select value={clinicId} onValueChange={withClear("clinicId", setClinicId)}>
             <SelectTrigger
               className={`w-64 ${errors.clinicId ? "border-destructive" : ""}`}
             >
@@ -252,15 +268,18 @@ export function AddSessionForm({
 
       <SessionDetailsCard
         date={date}
-        setDate={setDate}
+        setDate={(d) => {
+          setDate(d);
+          clearError("date");
+        }}
         bp={bp}
-        setBp={setBp}
+        setBp={withClear("bloodPressure", setBp)}
         pulse={pulse}
-        setPulse={setPulse}
+        setPulse={withClear("pulse", setPulse)}
         temperature={temperature}
-        setTemperature={setTemperature}
+        setTemperature={withClear("temperature", setTemperature)}
         respRate={respRate}
-        setRespRate={setRespRate}
+        setRespRate={withClear("respRate", setRespRate)}
         examination={examination}
         setExamination={setExamination}
         errors={errors}

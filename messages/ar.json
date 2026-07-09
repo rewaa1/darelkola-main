@@ -190,6 +190,7 @@
     "noCompleted": "لا توجد مواعيد مكتملة بعد",
     "new": "جديد",
     "checkIn": "تسجيل الحضور",
+    "labResults": "نتائج المعمل",
     "checkedInAt": "سجّل الحضور {time}",
     "byReceptionist": "بواسطة {name}",
     "bookedByReceptionist": "حجزه {name}",
