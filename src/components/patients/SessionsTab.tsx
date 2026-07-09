@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Printer, Pill, FlaskConical, Plus } from "lucide-react";
 import { SessionWithRelations } from "./sessions/types";
+import { LabSheet } from "./lab/types";
 import { SessionDetail } from "./sessions/SessionDetail";
 import { AddSessionForm } from "./sessions/AddSessionForm";
 
@@ -15,6 +16,7 @@ interface SessionsTabProps {
   patientId: string;
   patientName: string;
   sessions: SessionWithRelations[];
+  labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
 }
@@ -25,6 +27,7 @@ export function SessionsTab({
   patientId,
   patientName,
   sessions,
+  labSheets,
   lastClinicId,
   clinics,
 }: SessionsTabProps) {
@@ -189,6 +192,7 @@ export function SessionsTab({
       <AddSessionForm
         patientId={patientId}
         sessions={sessions}
+        labSheets={labSheets}
         lastClinicId={lastClinicId}
         clinics={clinics}
         onCancel={() => setView("list")}
@@ -201,6 +205,7 @@ export function SessionsTab({
     return (
       <SessionDetail
         session={selectedSession}
+        labSheets={labSheets}
         onBack={() => {
           setView("list");
           setSelectedSessionId(null);
@@ -253,7 +258,7 @@ export function SessionsTab({
                         setSelectedSessionId(session.id);
                         setView("detail");
                       }}
-                      className="w-full text-left p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      className="w-full text-start p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -271,13 +276,13 @@ export function SessionsTab({
                         <div className="flex items-center gap-2">
                           {activeCount > 0 && (
                             <Badge variant="secondary">
-                              <Pill className="h-3 w-3 mr-1" />
+                              <Pill className="h-3 w-3 me-1" />
                               {activeCount}
                             </Badge>
                           )}
                           {session.investigationSheets.length > 0 && (
                             <Badge variant="outline">
-                              <FlaskConical className="h-3 w-3 mr-1" />
+                              <FlaskConical className="h-3 w-3 me-1" />
                               {session.investigationSheets.length}
                             </Badge>
                           )}

@@ -29,7 +29,11 @@
     "no": "لا",
     "saving": "جارٍ الحفظ...",
     "deleting": "جارٍ الحذف...",
-    "creating": "جارٍ الإنشاء..."
+    "creating": "جارٍ الإنشاء...",
+    "noResults": "لا توجد نتائج.",
+    "rowsPerPage": "الصفوف",
+    "totalRows": "{count} إجمالاً",
+    "pageOf": "صفحة {page} من {total}"
   },
   "language": {
     "label": "اللغة",
@@ -163,6 +167,7 @@
     "examination": "الفحص",
     "sessions": "الجلسات",
     "medications": "الأدوية",
+    "labResults": "نتائج المعمل",
     "investigations": "الفحوصات",
     "appointments": "المواعيد"
   },
@@ -378,6 +383,26 @@
       "bpShort": "ض.د",
       "pulseShort": "النبض",
       "tempShort": "الحرارة"
+    },
+    "labTab": {
+      "title": "نتائج المعمل",
+      "addSheets": "إضافة أوراق",
+      "newSheets": "أوراق معمل جديدة",
+      "noSheets": "لا توجد نتائج معمل بعد",
+      "saving": "جارٍ الحفظ...",
+      "saveSheets": "{count, plural, =0 {حفظ} one {حفظ الورقة} two {حفظ الورقتين} few {حفظ # أوراق} many {حفظ # ورقة} other {حفظ # ورقة}}",
+      "added": "{count, plural, one {تمت إضافة الورقة} two {تمت إضافة ورقتين} few {تمت إضافة # أوراق} many {تمت إضافة # ورقة} other {تمت إضافة # ورقة}}",
+      "addFailed": "فشل حفظ نتائج المعمل",
+      "removed": "تم حذف الورقة",
+      "removeFailed": "فشل حذف الورقة",
+      "viewSheets": "الأوراق",
+      "viewCompare": "مقارنة",
+      "fromSession": "جلسة — {date}",
+      "thisSession": "هذه الجلسة",
+      "pending": "في انتظار جلسة",
+      "pendingHint": "{count, plural, one {ورقة واحدة غير مرتبطة بجلسة بعد. سيتم ربطها بالجلسة القادمة للمريض.} two {ورقتان غير مرتبطتين بجلسة بعد. سيتم ربطهما بالجلسة القادمة للمريض.} few {# أوراق غير مرتبطة بجلسة بعد. سيتم ربطها بالجلسة القادمة للمريض.} many {# ورقة غير مرتبطة بجلسة بعد. سيتم ربطها بالجلسة القادمة للمريض.} other {# ورقة غير مرتبطة بجلسة بعد. سيتم ربطها بالجلسة القادمة للمريض.}}",
+      "test": "الفحص",
+      "compareEmpty": "لا توجد قيم مسجلة للمقارنة"
     }
   },
   "checkInDialog": {
@@ -435,6 +460,8 @@
     "note": "ملاحظة",
     "investigationSheets": "أوراق الفحوصات",
     "addSheet": "إضافة ورقة",
+    "removeSheet": "حذف الورقة",
+    "sheetCount": "{count, plural, =0 {لا توجد أوراق} one {ورقة واحدة} two {ورقتان} few {# أوراق} many {# ورقة} other {# ورقة}}",
     "noSheets": "لا توجد أوراق فحوصات. اضغط \"إضافة ورقة\" لإرفاق نتائج المعمل.",
     "extraInvestigations": "فحوصات إضافية",
     "testName": "اسم الفحص",

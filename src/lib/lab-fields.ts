@@ -1,9 +1,18 @@
-"use client";
+// Field definitions for the InvestigationSheet (lab results) model.
+// Pure data — imported by both server actions and client components.
 
-import { InvestigationSheet, ExtraInvestigation } from "@prisma/client";
-import { useTranslations, useFormatter } from "next-intl";
+export interface LabField {
+  key: string;
+  label: string;
+}
 
-export const labCategories = [
+export interface LabCategory {
+  key: string;
+  label: string;
+  fields: LabField[];
+}
+
+export const labCategories: LabCategory[] = [
   {
     key: "hematology",
     label: "Hematology",
@@ -103,65 +112,85 @@ export const labCategories = [
   },
 ];
 
-export function InvestigationSheetView({
-  sheet,
-}: {
-  sheet: InvestigationSheet & { extraInvestigations: ExtraInvestigation[] };
-}) {
-  const t = useTranslations("session");
-  const tCat = useTranslations("session.categories");
-  const format = useFormatter();
-  const sheetData = sheet as Record<string, unknown>;
+// Fields typed `Float?` in schema.prisma — anything else is `String?`.
+export const LAB_FLOAT_FIELDS = new Set([
+  "hb",
+  "wbc",
+  "neutrophils",
+  "lymphocytes",
+  "platelets",
+  "esr",
+  "crp",
+  "glucose",
+  "glucosePP",
+  "hba1c",
+  "na",
+  "k",
+  "ca",
+  "po4",
+  "mg",
+  "albumin",
+  "sgot",
+  "sgpt",
+  "totalBilirubin",
+  "directBilirubin",
+  "ggt",
+  "alp",
+  "urea",
+  "creatinine",
+  "gfr",
+  "uricAcid",
+  "cholesterol",
+  "ldl",
+  "hdl",
+  "tg",
+  "ft3",
+  "ft4",
+  "tsh",
+  "pth",
+  "urineRbc",
+  "pusCells",
+  "inr",
+  "iron",
+  "ferritin",
+  "tibc",
+  "tsat",
+  "psaFree",
+  "psaTotal",
+  "psaRatio",
+  "c3",
+  "c4",
+]);
 
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="text-sm font-medium mb-3">
-        {t("labOn", {
-          date: format.dateTime(new Date(sheet.date), {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          }),
-        })}
-      </div>
-      {labCategories.map((category) => {
-        const filledFields = category.fields.filter(
-          (f) => sheetData[f.key] != null && sheetData[f.key] !== "",
-        );
-        if (filledFields.length === 0) return null;
-        return (
-          <div key={category.key} className="mb-3">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-              {tCat(category.key)}
-            </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {filledFields.map((f) => (
-                <div key={f.key} className="text-sm border rounded px-2 py-1">
-                  <span className="text-muted-foreground">{f.label}: </span>
-                  <span className="font-medium">
-                    {String(sheetData[f.key])}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-      {sheet.extraInvestigations.length > 0 && (
-        <div className="mb-3">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-            {t("extra")}
-          </div>
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {sheet.extraInvestigations.map((ei) => (
-              <div key={ei.id} className="text-sm border rounded px-2 py-1">
-                <span className="text-muted-foreground">{ei.name}: </span>
-                <span className="font-medium">{ei.result || "—"}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+// Every writable lab column, so submitted values can be filtered against a
+// known set before they reach Prisma.
+const LAB_FIELD_KEYS = new Set(
+  labCategories.flatMap((c) => c.fields.map((f) => f.key)),
+);
+
+export function isLabField(key: string) {
+  return LAB_FIELD_KEYS.has(key);
+}
+
+/**
+ * Turn a form's `Record<string, string>` into Prisma-ready column values:
+ * unknown keys dropped, blanks dropped, float columns parsed to numbers.
+ */
+export function coerceLabValues(
+  values: Record<string, string>,
+): Record<string, number | string> {
+  const coerced: Record<string, number | string> = {};
+  for (const [key, raw] of Object.entries(values)) {
+    if (!isLabField(key)) continue;
+    const value = raw?.trim();
+    if (!value) continue;
+
+    if (LAB_FLOAT_FIELDS.has(key)) {
+      const num = Number.parseFloat(value);
+      if (!Number.isNaN(num)) coerced[key] = num;
+    } else {
+      coerced[key] = value;
+    }
+  }
+  return coerced;
 }

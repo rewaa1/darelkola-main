@@ -135,7 +135,7 @@ function MedCard({ summary }: { summary: MedSummary }) {
       {/* Header row — always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors text-left"
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors text-start"
       >
         <div className="flex items-center gap-3 min-w-0">
           <Pill className="h-4 w-4 text-muted-foreground shrink-0" />

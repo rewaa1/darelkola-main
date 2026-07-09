@@ -70,6 +70,7 @@ model Patient {
   personalHistory     PersonalHistory?
   previousMedications PreviousMedication[]
   investigations      Investigation[]
+  investigationSheets InvestigationSheet[]
   sessions            Session[]
   appointments        Appointment[]
   registeredBy        Receptionist?        @relation("RegisteredBy", fields: [registeredById], references: [id])
@@ -218,10 +219,16 @@ model SessionMedication {
   @@map("session_medications")
 }
 
+// Lab results. Entered by reception when the patient arrives — before the
+// doctor's session exists — so these belong to the Patient, not the Session.
+// The next session created for the patient claims any still-unlinked sheets,
+// which is how a sheet ends up carrying the date of the session it arrived on.
 model InvestigationSheet {
   id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
+  patientId String   @map("patient_id")
+  sessionId String?  @map("session_id")
   date      DateTime @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Hematology
   hb          Float?
@@ -296,9 +303,11 @@ model InvestigationSheet {
   ancaP   String? @map("anca_p")
   spep    String?
 
-  session             Session              @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  patient             Patient              @relation(fields: [patientId], references: [id])
+  session             Session?             @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   extraInvestigations ExtraInvestigation[]
 
+  @@index([patientId, date])
   @@index([sessionId])
   @@map("investigation_sheets")
 }

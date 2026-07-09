@@ -13,6 +13,7 @@ import {
   InvestigationSheet,
   ExtraInvestigation,
 } from "@prisma/client";
+import { LabSheet } from "@/components/patients/lab/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import { HistoryTab } from "@/components/patients/HistoryTab";
 import { ExaminationTab } from "@/components/patients/ExaminationTab";
 import { MedicationsTab } from "@/components/patients/MedicationsTab";
 import { InvestigationsTab } from "@/components/patients/InvestigationsTab";
+import { LabResultsTab } from "@/components/patients/LabResultsTab";
 import { SessionsTab } from "@/components/patients/SessionsTab";
 import { AppointmentsTab } from "@/components/patients/AppointmentsTab";
 
@@ -42,6 +44,7 @@ type PatientWithRelations = Patient & {
   registeredBy: { name: string } | null;
   previousMedications: PreviousMedication[];
   investigations: Investigation[];
+  investigationSheets: LabSheet[];
   sessions: SessionWithRelations[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
@@ -121,12 +124,13 @@ export function PatientProfile({ patient, clinics }: PatientProfileProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="personal" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="personal">{tTabs("personal")}</TabsTrigger>
           <TabsTrigger value="history">{tTabs("history")}</TabsTrigger>
           <TabsTrigger value="examination">{tTabs("examination")}</TabsTrigger>
           <TabsTrigger value="sessions">{tTabs("sessions")}</TabsTrigger>
           <TabsTrigger value="medications">{tTabs("medications")}</TabsTrigger>
+          <TabsTrigger value="labResults">{tTabs("labResults")}</TabsTrigger>
           <TabsTrigger value="investigations">
             {tTabs("investigations")}
           </TabsTrigger>
@@ -156,6 +160,7 @@ export function PatientProfile({ patient, clinics }: PatientProfileProps) {
             patientId={patient.id}
             patientName={patient.personalHistory?.fullName ?? ""}
             sessions={patient.sessions}
+            labSheets={patient.investigationSheets}
             lastClinicId={lastClinicId}
             clinics={clinics}
           />
@@ -163,6 +168,13 @@ export function PatientProfile({ patient, clinics }: PatientProfileProps) {
 
         <TabsContent value="medications">
           <MedicationsTab sessions={patient.sessions} />
+        </TabsContent>
+
+        <TabsContent value="labResults">
+          <LabResultsTab
+            patientId={patient.id}
+            sheets={patient.investigationSheets}
+          />
         </TabsContent>
 
         <TabsContent value="investigations">

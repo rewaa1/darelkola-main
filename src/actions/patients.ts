@@ -165,6 +165,15 @@ export async function getPatient(patientId: string) {
       investigations: {
         orderBy: { date: "desc" },
       },
+      // Every sheet the patient has, linked or not — the Lab Results tab needs
+      // the full history so the doctor can compare across visits.
+      investigationSheets: {
+        include: {
+          extraInvestigations: true,
+          session: { select: { id: true, date: true } },
+        },
+        orderBy: { date: "desc" },
+      },
       sessions: {
         orderBy: { date: "desc" },
         include: {

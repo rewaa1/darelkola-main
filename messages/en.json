@@ -29,7 +29,11 @@
     "no": "No",
     "saving": "Saving...",
     "deleting": "Deleting...",
-    "creating": "Creating..."
+    "creating": "Creating...",
+    "noResults": "No results.",
+    "rowsPerPage": "Rows",
+    "totalRows": "{count} total",
+    "pageOf": "Page {page} of {total}"
   },
   "language": {
     "label": "Language",
@@ -163,6 +167,7 @@
     "examination": "Examination",
     "sessions": "Sessions",
     "medications": "Medications",
+    "labResults": "Lab Results",
     "investigations": "Investigations",
     "appointments": "Appointments"
   },
@@ -378,6 +383,26 @@
       "bpShort": "BP",
       "pulseShort": "Pulse",
       "tempShort": "Temp"
+    },
+    "labTab": {
+      "title": "Lab Results",
+      "addSheets": "Add Sheets",
+      "newSheets": "New Lab Sheets",
+      "noSheets": "No lab results yet",
+      "saving": "Saving...",
+      "saveSheets": "{count, plural, =0 {Save} one {Save sheet} other {Save # sheets}}",
+      "added": "{count, plural, one {Sheet added} other {# sheets added}}",
+      "addFailed": "Failed to save lab results",
+      "removed": "Sheet removed",
+      "removeFailed": "Failed to remove sheet",
+      "viewSheets": "Sheets",
+      "viewCompare": "Compare",
+      "fromSession": "Session — {date}",
+      "thisSession": "This session",
+      "pending": "Awaiting session",
+      "pendingHint": "{count, plural, one {1 sheet is not linked to a session yet. It will be attached to the patient's next session.} other {# sheets are not linked to a session yet. They will be attached to the patient's next session.}}",
+      "test": "Test",
+      "compareEmpty": "No recorded values to compare"
     }
   },
   "checkInDialog": {
@@ -435,6 +460,8 @@
     "note": "Note",
     "investigationSheets": "Investigation Sheets",
     "addSheet": "Add Sheet",
+    "removeSheet": "Remove sheet",
+    "sheetCount": "{count, plural, =0 {No sheets} one {1 sheet} other {# sheets}}",
     "noSheets": "No investigation sheets. Click \"Add Sheet\" to attach lab results.",
     "extraInvestigations": "Extra Investigations",
     "testName": "Test name",

@@ -1,6 +1,8 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { getDirection, type Locale } from "@/i18n/config";
 import {
   ChartContainer,
   ChartTooltip,
@@ -8,22 +10,26 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-const chartConfig = {
-  count: {
-    label: "Appointments",
-    color: "hsl(221, 83%, 53%)",
-  },
-} satisfies ChartConfig;
-
 interface DashboardChartProps {
   data: { date: string; count: number }[];
 }
 
 export function DashboardChart({ data }: DashboardChartProps) {
-  // Format dates: short weekday labels (e.g., "Mon")
+  const t = useTranslations("nav");
+  const locale = useLocale() as Locale;
+  const isRtl = getDirection(locale) === "rtl";
+
+  const chartConfig = {
+    count: {
+      label: t("appointments"),
+      color: "hsl(221, 83%, 53%)",
+    },
+  } satisfies ChartConfig;
+
+  // Narrow weekday initials, in the active locale (e.g. "M" / "ن").
   const formatted = data.map((d) => ({
     ...d,
-    label: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+    label: new Date(d.date + "T00:00:00").toLocaleDateString(locale, {
       weekday: "narrow",
     }),
   }));
@@ -36,7 +42,11 @@ export function DashboardChart({ data }: DashboardChartProps) {
     >
       <AreaChart
         data={formatted}
-        margin={{ top: 5, right: 5, left: -25, bottom: 0 }}
+        margin={
+          isRtl
+            ? { top: 5, right: -25, left: 5, bottom: 0 }
+            : { top: 5, right: 5, left: -25, bottom: 0 }
+        }
       >
         <defs>
           <linearGradient id="fillCount" x1="0" y1="0" x2="0" y2="1">
@@ -53,14 +63,18 @@ export function DashboardChart({ data }: DashboardChartProps) {
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        {/* In RTL the timeline runs right-to-left, so the oldest day sits on
+            the right and the value axis moves to the right edge. */}
         <XAxis
           dataKey="label"
+          reversed={isRtl}
           tickLine={false}
           axisLine={false}
           tickMargin={6}
           fontSize={11}
         />
         <YAxis
+          orientation={isRtl ? "right" : "left"}
           tickLine={false}
           axisLine={false}
           tickMargin={2}

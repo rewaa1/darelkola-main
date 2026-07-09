@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import {
   Appointment,
@@ -35,8 +35,10 @@ import { HistoryTab } from "@/components/patients/HistoryTab";
 import { ExaminationTab } from "@/components/patients/ExaminationTab";
 import { MedicationsTab } from "@/components/patients/MedicationsTab";
 import { InvestigationsTab } from "@/components/patients/InvestigationsTab";
+import { LabResultsTab } from "@/components/patients/LabResultsTab";
 import { SessionsTab } from "@/components/patients/SessionsTab";
 import { AppointmentsTab } from "@/components/patients/AppointmentsTab";
+import { LabSheet } from "@/components/patients/lab/types";
 
 type SessionWithRelations = Session & {
   sessionMedications: (SessionMedication & { medication: Medication })[];
@@ -49,6 +51,7 @@ type PatientWithRelations = Patient & {
   personalHistory: PersonalHistory | null;
   previousMedications: PreviousMedication[];
   investigations: Investigation[];
+  investigationSheets: LabSheet[];
   sessions: SessionWithRelations[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
@@ -69,22 +72,27 @@ export function CurrentPatient({
   const [patient, setPatient] = useState<PatientWithRelations | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (appointment?.patientId) {
-      startTransition(async () => {
-        try {
-          const data = await getPatient(appointment.patientId!);
-          setPatient(data);
-        } catch {
-          setPatient(null);
-        }
-      });
-    } else {
-      startTransition(() => {
-        setPatient(null);
-      });
+  const patientId = appointment?.patientId ?? null;
+
+  // The patient lives in local state, so revalidatePath from a server action
+  // cannot reach it. Tabs that mutate patient data call this to reload.
+  const loadPatient = useCallback(() => {
+    if (!patientId) {
+      startTransition(() => setPatient(null));
+      return;
     }
-  }, [appointment?.patientId]);
+    startTransition(async () => {
+      try {
+        setPatient(await getPatient(patientId));
+      } catch {
+        setPatient(null);
+      }
+    });
+  }, [patientId]);
+
+  useEffect(() => {
+    loadPatient();
+  }, [loadPatient]);
 
   if (!appointment) {
     return (
@@ -98,11 +106,15 @@ export function CurrentPatient({
     );
   }
 
-  const history = patient?.personalHistory;
+  // Only render state that belongs to the appointment on screen. Without this,
+  // calling the next patient would flash the previous one's data, since the
+  // stale `patient` stays mounted until the new fetch resolves.
+  const current = patient?.id === patientId ? patient : null;
+  const history = current?.personalHistory;
 
   // Derive the last clinic from most recent appointment
   const lastClinicId =
-    patient?.appointments?.sort(
+    current?.appointments?.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     )?.[0]?.clinicId || null;
 
@@ -130,7 +142,7 @@ export function CurrentPatient({
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="font-semibold truncate">
-                    {patient?.personalHistory?.fullName ??
+                    {current?.personalHistory?.fullName ??
                       appointment.patientName}
                   </span>
                   {history?.sex && (
@@ -153,7 +165,7 @@ export function CurrentPatient({
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="h-3 w-3 shrink-0" />
                   <span>
-                    {patient?.personalHistory?.phoneNumber ??
+                    {current?.personalHistory?.phoneNumber ??
                       appointment.patientPhone}
                   </span>
                 </div>
@@ -180,7 +192,7 @@ export function CurrentPatient({
       </Card>
 
       {/* Full Patient Profile Tabs */}
-      {isPending && (
+      {isPending && !current && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin" />
@@ -189,9 +201,10 @@ export function CurrentPatient({
         </Card>
       )}
 
-      {!isPending && patient && (
+      {/* Kept mounted while reloading so the open tab is not reset */}
+      {current && (
         <Tabs defaultValue="personal" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="personal">{tTabs("personal")}</TabsTrigger>
             <TabsTrigger value="history">{tTabs("history")}</TabsTrigger>
             <TabsTrigger value="examination">
@@ -201,6 +214,7 @@ export function CurrentPatient({
             <TabsTrigger value="medications">
               {tTabs("medications")}
             </TabsTrigger>
+            <TabsTrigger value="labResults">{tTabs("labResults")}</TabsTrigger>
             <TabsTrigger value="investigations">
               {tTabs("investigations")}
             </TabsTrigger>
@@ -210,49 +224,58 @@ export function CurrentPatient({
           </TabsList>
 
           <TabsContent value="personal">
-            <PersonalInfoTab history={history ?? null} patientId={patient.id} />
+            <PersonalInfoTab history={history ?? null} patientId={current.id} />
           </TabsContent>
 
           <TabsContent value="history">
             <HistoryTab
-              patientId={patient.id}
+              patientId={current.id}
               history={history ?? null}
-              previousMedications={patient.previousMedications}
+              previousMedications={current.previousMedications}
             />
           </TabsContent>
 
           <TabsContent value="examination">
-            <ExaminationTab patientId={patient.id} history={history ?? null} />
+            <ExaminationTab patientId={current.id} history={history ?? null} />
           </TabsContent>
 
           <TabsContent value="sessions">
             <SessionsTab
-              patientId={patient.id}
+              patientId={current.id}
               patientName={history?.fullName ?? ""}
-              sessions={patient.sessions}
+              sessions={current.sessions}
+              labSheets={current.investigationSheets}
               lastClinicId={lastClinicId}
               clinics={clinics}
             />
           </TabsContent>
 
           <TabsContent value="medications">
-            <MedicationsTab sessions={patient.sessions} />
+            <MedicationsTab sessions={current.sessions} />
+          </TabsContent>
+
+          <TabsContent value="labResults">
+            <LabResultsTab
+              patientId={current.id}
+              sheets={current.investigationSheets}
+              onChanged={loadPatient}
+            />
           </TabsContent>
 
           <TabsContent value="investigations">
             <InvestigationsTab
-              patientId={patient.id}
-              investigations={patient.investigations}
+              patientId={current.id}
+              investigations={current.investigations}
             />
           </TabsContent>
 
           <TabsContent value="appointments">
-            <AppointmentsTab appointments={patient.appointments} />
+            <AppointmentsTab appointments={current.appointments} />
           </TabsContent>
         </Tabs>
       )}
 
-      {!isPending && !patient && appointment.patientId && (
+      {!isPending && !current && appointment.patientId && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <p>{t("couldNotLoad")}</p>

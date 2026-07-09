@@ -261,6 +261,7 @@ async function main() {
   // Investigation sheet for session 1
   await prisma.investigationSheet.create({
     data: {
+      patientId: "patient-1",
       sessionId: session1.id,
       date: oneMonthAgo,
       hb: 13.5,
@@ -357,6 +358,7 @@ async function main() {
   // Investigation sheet for session 2
   await prisma.investigationSheet.create({
     data: {
+      patientId: "patient-1",
       sessionId: session2.id,
       date: twoWeeksAgo,
       hb: 14.0,

@@ -21,9 +21,3 @@ export interface MedEntry {
   notes: string;
   active: boolean;
 }
-
-export interface InvestigationSheetEntry {
-  date: Date;
-  values: Record<string, string>;
-  extras: { name: string; result: string }[];
-}

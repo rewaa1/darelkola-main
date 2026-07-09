@@ -18,14 +18,11 @@ import { toast } from "sonner";
 import { createSession } from "@/actions/sessions";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
-import {
-  SessionWithRelations,
-  MedEntry,
-  InvestigationSheetEntry,
-} from "./types";
+import { SessionWithRelations, MedEntry } from "./types";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
-import { InvestigationSheetsCard } from "./InvestigationSheetsCard";
+import { SessionLabResults } from "../lab/SessionLabResults";
+import { LabSheet } from "../lab/types";
 
 // ==============================
 // Helper: collect all unique meds from sessions
@@ -60,6 +57,7 @@ function collectPatientMeds(sessions: SessionWithRelations[]): MedEntry[] {
 interface AddSessionFormProps {
   patientId: string;
   sessions: SessionWithRelations[];
+  labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
   onCancel: () => void;
@@ -68,6 +66,7 @@ interface AddSessionFormProps {
 export function AddSessionForm({
   patientId,
   sessions,
+  labSheets,
   lastClinicId,
   clinics,
   onCancel,
@@ -96,11 +95,6 @@ export function AddSessionForm({
   );
   const [medSearch, setMedSearch] = useState("");
   const [medResults, setMedResults] = useState<Medication[]>([]);
-
-  // Investigation sheets
-  const [investigationSheets, setInvestigationSheets] = useState<
-    InvestigationSheetEntry[]
-  >([]);
 
   // ---- Medication handlers ----
 
@@ -168,56 +162,6 @@ export function AddSessionForm({
     setSelectedMeds(updated);
   };
 
-  // ---- Investigation sheet handlers ----
-
-  const addSheet = () => {
-    setInvestigationSheets([
-      ...investigationSheets,
-      { date: new Date(), values: {}, extras: [] },
-    ]);
-  };
-
-  const removeSheet = (index: number) => {
-    setInvestigationSheets(investigationSheets.filter((_, i) => i !== index));
-  };
-
-  const updateSheetDate = (index: number, newDate: Date) => {
-    const updated = [...investigationSheets];
-    updated[index].date = newDate;
-    setInvestigationSheets(updated);
-  };
-
-  const updateSheetValue = (index: number, key: string, value: string) => {
-    const updated = [...investigationSheets];
-    updated[index].values[key] = value;
-    setInvestigationSheets(updated);
-  };
-
-  const addSheetExtra = (index: number) => {
-    const updated = [...investigationSheets];
-    updated[index].extras.push({ name: "", result: "" });
-    setInvestigationSheets(updated);
-  };
-
-  const updateSheetExtra = (
-    sheetIdx: number,
-    extraIdx: number,
-    field: "name" | "result",
-    value: string,
-  ) => {
-    const updated = [...investigationSheets];
-    updated[sheetIdx].extras[extraIdx][field] = value;
-    setInvestigationSheets(updated);
-  };
-
-  const removeSheetExtra = (sheetIdx: number, extraIdx: number) => {
-    const updated = [...investigationSheets];
-    updated[sheetIdx].extras = updated[sheetIdx].extras.filter(
-      (_, i) => i !== extraIdx,
-    );
-    setInvestigationSheets(updated);
-  };
-
   // ---- Submit ----
 
   const handleSubmit = () => {
@@ -241,24 +185,6 @@ export function AddSessionForm({
 
     startTransition(async () => {
       try {
-        const sheets = investigationSheets.map((sheet) => {
-          const values: Record<string, string> = {};
-          for (const [key, value] of Object.entries(sheet.values)) {
-            if (value && value.trim()) {
-              values[key] = value.trim();
-            }
-          }
-          const extras = sheet.extras
-            .filter((e) => e.name.trim())
-            .map((e) => ({ name: e.name.trim(), result: e.result.trim() }));
-
-          return {
-            date: format(sheet.date, "yyyy-MM-dd"),
-            values,
-            extras: extras.length > 0 ? extras : undefined,
-          };
-        });
-
         await createSession(patientId, {
           date: format(date!, "yyyy-MM-dd"),
           clinicId,
@@ -275,7 +201,6 @@ export function AddSessionForm({
             duration: sm.duration || undefined,
             notes: sm.notes || undefined,
           })),
-          investigationSheets: sheets.length > 0 ? sheets : undefined,
         });
 
         toast.success(t("created"));
@@ -352,16 +277,8 @@ export function AddSessionForm({
         onUpdateMed={updateMed}
       />
 
-      <InvestigationSheetsCard
-        sheets={investigationSheets}
-        onAddSheet={addSheet}
-        onRemoveSheet={removeSheet}
-        onUpdateDate={updateSheetDate}
-        onUpdateValue={updateSheetValue}
-        onAddExtra={addSheetExtra}
-        onUpdateExtra={updateSheetExtra}
-        onRemoveExtra={removeSheetExtra}
-      />
+      {/* Lab results reception entered ahead of this visit, read-only */}
+      <SessionLabResults sheets={labSheets} />
 
       {/* Bottom submit */}
       <Separator />

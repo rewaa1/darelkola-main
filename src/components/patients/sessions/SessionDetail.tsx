@@ -6,16 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import {
-  ChevronLeft,
-  Printer,
-  Activity,
-  Pill,
-  FlaskConical,
-} from "lucide-react";
+import { ChevronLeft, Printer, Activity, Pill } from "lucide-react";
 import { toggleSessionMedication } from "@/actions/sessions";
 import { SessionWithRelations } from "./types";
-import { InvestigationSheetView } from "./InvestigationSheetView";
+import { SessionLabResults } from "../lab/SessionLabResults";
+import { LabSheet } from "../lab/types";
 
 function VitalCard({ label, value }: { label: string; value: string | null }) {
   return (
@@ -28,12 +23,14 @@ function VitalCard({ label, value }: { label: string; value: string | null }) {
 
 interface SessionDetailProps {
   session: SessionWithRelations;
+  labSheets: LabSheet[];
   onBack: () => void;
   onPrint: () => void;
 }
 
 export function SessionDetail({
   session,
+  labSheets,
   onBack,
   onPrint,
 }: SessionDetailProps) {
@@ -159,22 +156,8 @@ export function SessionDetail({
         </CardContent>
       </Card>
 
-      {/* Investigation Sheets */}
-      {session.investigationSheets.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <FlaskConical className="h-4 w-4" />
-              <CardTitle className="text-base">{t("labResults")}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {session.investigationSheets.map((sheet) => (
-              <InvestigationSheetView key={sheet.id} sheet={sheet} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Lab results — the patient's full history, this session's column marked */}
+      <SessionLabResults sheets={labSheets} currentSessionId={session.id} />
     </div>
   );
 }

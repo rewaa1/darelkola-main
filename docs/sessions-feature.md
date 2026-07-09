@@ -2,7 +2,9 @@
 
 ## Overview
 
-Sessions track each patient visit over time. Each session records the **date**, **vitals**, **examination notes**, **medications**, and **medical tests** (lab results).
+Sessions track each patient visit over time. Each session records the **date**, **vitals**, **examination notes**, and **medications**.
+
+**Lab results are not entered inside a session.** Reception enters them on the patient's **Lab Results** tab when the patient arrives, before the doctor's session exists. The next session created for that patient claims the pending sheets, which is how each sheet ends up stamped with the date of the session it arrived on.
 
 ---
 
@@ -38,7 +40,7 @@ One record per patient visit.
 | respRate      | String?  | e.g. "18/min"               |
 | createdAt     | DateTime |                             |
 
-Relations: `SessionMedication[]`, `InvestigationSheet[]`
+Relations: `SessionMedication[]`, `InvestigationSheet[]` (claimed at creation — see below)
 
 ---
 
@@ -59,13 +61,23 @@ Relations: `SessionMedication[]`, `InvestigationSheet[]`
 
 ### InvestigationSheet
 
-Each session can have **0 or more** investigation sheets, each with its **own date**.
+Owned by the **patient**, optionally linked to a **session**. A patient can have any number of sheets, each with its **own date** (when the tests were performed — often earlier than the visit).
 
-| Field     | Type     | Notes                         |
-| --------- | -------- | ----------------------------- |
-| id        | String   | PK                            |
-| sessionId | String   | FK → Session                  |
-| date      | DateTime | Date the tests were performed |
+| Field     | Type      | Notes                                            |
+| --------- | --------- | ------------------------------------------------ |
+| id        | String    | PK                                               |
+| patientId | String    | FK → Patient                                     |
+| sessionId | String?   | FK → Session. `null` until a session claims it   |
+| date      | DateTime  | Date the tests were performed                    |
+| createdAt | DateTime  | When reception entered it                        |
+
+**Lifecycle**
+
+1. Reception opens the patient's **Lab Results** tab and enters one or more sheets. They are saved with `sessionId = null` and show an *Awaiting session* badge.
+2. The doctor creates a session. Inside that transaction, every sheet for the patient with `sessionId = null` is stamped with the new session's id.
+3. From then on the sheet displays the session date it arrived on, and appears read-only inside that session's detail view.
+
+Deleting a session sets `sessionId` back to `null` (`onDelete: SetNull`) rather than deleting the patient's lab history. Those sheets become pending again and will be claimed by the next session.
 
 #### Hematology
 
@@ -187,13 +199,23 @@ For custom test results not covered by the standard fields above.
 
 - List of sessions by date
 - Sidebar: all medications, active ones highlighted
-- "Add Session" dialog: date, vitals, examination, medications, investigation sheets
+- "Add Session" form: date, vitals, examination, medications, then the patient's lab results (read-only) so the doctor can consult them while writing the session
 - Print button → last session's active meds
 
 ### Session Detail
 
-- Vitals, examination, medications (with toggle), investigation sheets
+- Vitals, examination, medications (with toggle)
+- Lab results after the medications, as the same compare table used on the Lab Results tab: the patient's **whole** lab history, with the column(s) belonging to this session tinted and labelled *This session*. Showing only this session's sheets would defeat the point — the doctor needs the earlier ones to compare against.
+- Read-only; sheets are added and deleted from the Lab Results tab
 - Print → this session's active meds
+
+### Lab Results Tab (Patient Profile)
+
+Also rendered on the doctor's current-patient view in the queue.
+
+- **Sheets view** — every sheet the patient has ever had, newest first, each badged with its session date or *Awaiting session*
+- **Compare view** — tests down the side, sheet dates across the top, **newest first**, so the most recent results sit in the leading column and older ones trail off to the side. Only tests with at least one recorded value get a row; a blank cell means that sheet did not include the test.
+- "Add Sheets" dialog — several sheets entered at once, which is what reception does when a patient arrives with a stack of them
 
 ### Investigation Sheet View
 
@@ -220,6 +242,8 @@ For custom test results not covered by the standard fields above.
 - ✅ Track dosage, frequency, duration, notes per session-medication
 - ✅ Styled prescription layout (design TBD)
 - ✅ Track vitals per session
-- ✅ Investigation sheets with own dates, multiple per session
+- ✅ Investigation sheets belong to the patient, with their own test dates
+- ✅ Sheets are entered by reception before the session, then claimed by the next session created
+- ✅ Sheets are read-only inside a session; they are added and deleted from the Lab Results tab
 - ✅ All lab fields are optional
 - ✅ Extra investigations for custom tests

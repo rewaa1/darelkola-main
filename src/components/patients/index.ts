@@ -4,5 +4,6 @@ export { HistoryTab } from "./HistoryTab";
 export { ExaminationTab } from "./ExaminationTab";
 export { MedicationsTab } from "./MedicationsTab";
 export { InvestigationsTab } from "./InvestigationsTab";
+export { LabResultsTab } from "./LabResultsTab";
 export { SessionsTab } from "./SessionsTab";
 export { AppointmentsTab } from "./AppointmentsTab";

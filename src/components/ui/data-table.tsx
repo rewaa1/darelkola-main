@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   flexRender,
   getCoreRowModel,
@@ -70,6 +71,7 @@ export function DataTable<TData, TValue>({
   onPageChange,
   onPageSizeChange,
 }: DataTableProps<TData, TValue>) {
+  const t = useTranslations("common");
   const isServerPagination =
     totalCount !== undefined &&
     page !== undefined &&
@@ -204,7 +206,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No results.
+                  {t("noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -216,11 +218,13 @@ export function DataTable<TData, TValue>({
       {table.getPageCount() > 1 && (
         <div className="flex items-center justify-between px-1">
           <div className="text-sm text-muted-foreground hidden sm:block">
-            {displayedTotal} total
+            {t("totalRows", { count: displayedTotal })}
           </div>
-          <div className="flex items-center gap-4 sm:gap-6 ml-auto">
+          <div className="flex items-center gap-4 sm:gap-6 ms-auto">
             <div className="hidden items-center gap-2 sm:flex">
-              <span className="text-sm text-muted-foreground">Rows</span>
+              <span className="text-sm text-muted-foreground">
+                {t("rowsPerPage")}
+              </span>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => table.setPageSize(Number(value))}
@@ -238,8 +242,10 @@ export function DataTable<TData, TValue>({
               </Select>
             </div>
             <span className="text-sm font-medium whitespace-nowrap">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              {t("pageOf", {
+                page: table.getState().pagination.pageIndex + 1,
+                total: table.getPageCount(),
+              })}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -249,7 +255,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <ChevronsLeft className="h-4 w-4" />
+                <ChevronsLeft className="h-4 w-4 rtl:rotate-180" />
               </Button>
               <Button
                 variant="outline"
@@ -258,7 +264,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
               </Button>
               <Button
                 variant="outline"
@@ -267,7 +273,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 rtl:rotate-180" />
               </Button>
               <Button
                 variant="outline"
@@ -276,7 +282,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <ChevronsRight className="h-4 w-4" />
+                <ChevronsRight className="h-4 w-4 rtl:rotate-180" />
               </Button>
             </div>
           </div>

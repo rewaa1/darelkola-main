@@ -289,7 +289,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
                             <button
                               key={patient.id}
                               type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                              className="w-full text-start px-3 py-2 text-sm hover:bg-muted"
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 handleSelectPatient(patient);

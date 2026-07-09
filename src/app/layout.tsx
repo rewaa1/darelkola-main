@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { DirectionProvider } from "@/components/direction-provider";
 import { getDirection, type Locale } from "@/i18n/config";
 
 const geistSans = Geist({
@@ -42,8 +43,10 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <NextIntlClientProvider>
-          {children}
-          <Toaster richColors position="top-center" />
+          <DirectionProvider dir={dir}>
+            {children}
+            <Toaster richColors position="top-center" dir={dir} />
+          </DirectionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

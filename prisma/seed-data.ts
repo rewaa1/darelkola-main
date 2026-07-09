@@ -237,6 +237,7 @@ async function main() {
 
   await prisma.investigationSheet.create({
     data: {
+      patientId: "patient-1",
       sessionId: session1.id,
       date: oneMonthAgo,
       hb: 13.5, wbc: 7.2, neutrophils: 60, lymphocytes: 30, platelets: 250, esr: 15, crp: 3.2,
@@ -277,6 +278,7 @@ async function main() {
 
   await prisma.investigationSheet.create({
     data: {
+      patientId: "patient-1",
       sessionId: session2.id,
       date: twoWeeksAgo,
       hb: 14.0, wbc: 6.8, neutrophils: 58, lymphocytes: 32, platelets: 260, esr: 10, crp: 1.5,

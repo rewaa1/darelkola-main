@@ -53,11 +53,6 @@ interface CreateSessionInput {
     duration?: string;
     notes?: string;
   }[];
-  investigationSheets?: {
-    date: string;
-    values: Record<string, string>;
-    extras?: { name: string; result: string }[];
-  }[];
 }
 
 export async function createSession(
@@ -95,6 +90,14 @@ export async function createSession(
       },
     });
 
+    // Claim the lab sheets reception entered ahead of this visit. They were
+    // created against the patient with no session; this stamps them with the
+    // session they arrived on so later sessions can tell them apart.
+    await tx.investigationSheet.updateMany({
+      where: { patientId, sessionId: null },
+      data: { sessionId: created.id },
+    });
+
     // Auto-create a COMPLETED appointment for this session
     const patient = await tx.personalHistory.findUnique({
       where: { patientId },
@@ -125,83 +128,6 @@ export async function createSession(
 
     return created;
   });
-
-  // Create investigation sheets if provided
-  if (data.investigationSheets?.length) {
-    // Fields that are Float? in the schema — must be parsed from string
-    const floatFields = new Set([
-      "hb",
-      "wbc",
-      "neutrophils",
-      "lymphocytes",
-      "platelets",
-      "esr",
-      "crp",
-      "glucose",
-      "glucosePP",
-      "hba1c",
-      "na",
-      "k",
-      "ca",
-      "po4",
-      "mg",
-      "albumin",
-      "sgot",
-      "sgpt",
-      "totalBilirubin",
-      "directBilirubin",
-      "ggt",
-      "alp",
-      "urea",
-      "creatinine",
-      "gfr",
-      "uricAcid",
-      "cholesterol",
-      "ldl",
-      "hdl",
-      "tg",
-      "ft3",
-      "ft4",
-      "tsh",
-      "pth",
-      "urineRbc",
-      "pusCells",
-      "inr",
-      "iron",
-      "ferritin",
-      "tibc",
-      "tsat",
-      "psaFree",
-      "psaTotal",
-      "psaRatio",
-      "c3",
-      "c4",
-    ]);
-
-    for (const sheet of data.investigationSheets) {
-      const { date: sheetDate, values, extras } = sheet;
-
-      // Convert values to proper types
-      const typedValues: Record<string, number | string> = {};
-      for (const [key, val] of Object.entries(values)) {
-        if (floatFields.has(key)) {
-          const num = parseFloat(val);
-          if (!isNaN(num)) typedValues[key] = num;
-        } else {
-          typedValues[key] = val;
-        }
-      }
-
-      await prisma.investigationSheet.create({
-        data: {
-          sessionId: session.id,
-          date: new Date(sheetDate),
-          ...typedValues,
-          extraInvestigations: extras?.length ? { create: extras } : undefined,
-        } as Parameters<typeof prisma.investigationSheet.create>[0]["data"],
-      });
-    }
-  }
 
   revalidatePath(`/patients/${patientId}`);
   revalidatePath("/queue");
@@ -302,47 +228,4 @@ export async function updateSessionMedication(
     include: { session: { select: { patientId: true } } },
   });
   revalidatePath(`/patients/${sm.session.patientId}`);
-}
-
-// ==============================
-// Investigation Sheets
-// ==============================
-
-export async function addInvestigationSheet(
-  sessionId: string,
-  data: Record<string, unknown> & { date: string },
-) {
-  const session = await prisma.session.findUnique({
-    where: { id: sessionId },
-    select: { patientId: true },
-  });
-
-  const { date, extraInvestigations, ...labFields } = data as Record<
-    string,
-    unknown
-  > & {
-    date: string;
-    extraInvestigations?: { name: string; result?: string }[];
-  };
-
-  await prisma.investigationSheet.create({
-    data: {
-      sessionId,
-      date: new Date(date),
-      ...labFields,
-      extraInvestigations: extraInvestigations?.length
-        ? { create: extraInvestigations }
-        : undefined,
-    } as Parameters<typeof prisma.investigationSheet.create>[0]["data"],
-  });
-
-  if (session) revalidatePath(`/patients/${session.patientId}`);
-}
-
-export async function deleteInvestigationSheet(sheetId: string) {
-  const sheet = await prisma.investigationSheet.delete({
-    where: { id: sheetId },
-    include: { session: { select: { patientId: true } } },
-  });
-  revalidatePath(`/patients/${sheet.session.patientId}`);
 }
