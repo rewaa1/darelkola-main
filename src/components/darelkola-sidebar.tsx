@@ -33,7 +33,7 @@ import {
 const navItems = [
   {
     key: "dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
@@ -91,7 +91,7 @@ export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/">
+              <Link href="/dashboard">
                 <Stethoscope className="!size-5 text-primary" />
                 <span className="text-base font-semibold">Darelkola</span>
               </Link>

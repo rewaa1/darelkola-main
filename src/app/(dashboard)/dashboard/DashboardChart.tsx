@@ -30,6 +30,7 @@ export function DashboardChart({ data }: DashboardChartProps) {
 
   return (
     <ChartContainer
+      id="dashboard-appointments"
       config={chartConfig}
       className="aspect-auto h-[180px] sm:h-[200px] w-full"
     >

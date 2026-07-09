@@ -16,7 +16,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 
 // Maps the first path segment to a translation key under the "nav" namespace.
 const routeKeys: Record<string, string> = {
-  "/": "dashboard",
+  "/dashboard": "dashboard",
   "/queue": "queue",
   "/patients": "patients",
   "/appointments": "appointments",
@@ -33,9 +33,8 @@ export function DarelkolaHeader() {
   const matchedKey =
     routeKeys[pathname] ??
     routeKeys[
-      Object.keys(routeKeys).find(
-        (route) => route !== "/" && pathname.startsWith(route),
-      ) ?? "/"
+      Object.keys(routeKeys).find((route) => pathname.startsWith(route)) ??
+        "/dashboard"
     ];
 
   return (
@@ -45,7 +44,9 @@ export function DarelkolaHeader() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem className="hidden md:block">
-            <BreadcrumbLink href="/">{tHeader("clinicName")}</BreadcrumbLink>
+            <BreadcrumbLink href="/dashboard">
+              {tHeader("clinicName")}
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator className="hidden md:block" />
           <BreadcrumbItem>

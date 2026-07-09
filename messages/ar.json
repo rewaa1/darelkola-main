@@ -589,5 +589,21 @@
       "checkEmailSubtitle": "لقد أرسلنا رابط إعادة تعيين كلمة المرور إلى <strong>{email}</strong>"
     },
     "emailPlaceholder": "doctor@clinic.com"
+  },
+  "landing": {
+    "unit": "وحدة الكلى",
+    "branches": "فرعان",
+    "wordmark": "Darelkola",
+    "wordmarkArabic": "عيادة دار الكلى",
+    "tagline": "رعاية الكلى، موثَّقة بالكامل.",
+    "signIn": "تسجيل الدخول",
+    "copyright": "طُوِّر بواسطة Orbix لعيادة دار الكلى. © {year} Orbix. جميع الحقوق محفوظة.",
+    "systems": {
+      "patients": "المرضى",
+      "queue": "قائمة الانتظار",
+      "appointments": "المواعيد",
+      "medications": "الأدوية",
+      "records": "السجلات"
+    }
   }
 }

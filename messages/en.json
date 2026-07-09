@@ -606,5 +606,21 @@
       "checkEmailSubtitle": "We've sent a password reset link to <strong>{email}</strong>"
     },
     "emailPlaceholder": "doctor@clinic.com"
+  },
+  "landing": {
+    "unit": "Renal Unit",
+    "branches": "Two branches",
+    "wordmark": "Darelkola",
+    "wordmarkArabic": "عيادة دار الكلى",
+    "tagline": "Renal care, on the record.",
+    "signIn": "Sign in",
+    "copyright": "Built by Orbix for Darelkola Clinic. © {year} Orbix. All rights reserved.",
+    "systems": {
+      "patients": "Patients",
+      "queue": "Queue",
+      "appointments": "Appointments",
+      "medications": "Medications",
+      "records": "Records"
+    }
   }
 }

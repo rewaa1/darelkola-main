@@ -30,23 +30,29 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { pathname } = request.nextUrl;
+
   // Public auth pages
   const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/forgot-password") ||
-    request.nextUrl.pathname.startsWith("/reset-password");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/reset-password");
+
+  // The splash at "/" is the threshold: public, and shown before sign-in.
+  const isSplash = pathname === "/";
 
   // Redirect unauthenticated users to login
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isSplash) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && isAuthPage) {
+  // Staff who already have a session have no use for the threshold or the auth
+  // pages — send them straight to work.
+  if (user && (isAuthPage || isSplash)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
