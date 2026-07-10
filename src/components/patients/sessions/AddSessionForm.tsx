@@ -16,6 +16,7 @@ import { ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createSession } from "@/actions/sessions";
+import { clinicDayLocal } from "@/lib/clinic-day";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
 import { SessionWithRelations, MedEntry } from "./types";
@@ -75,8 +76,10 @@ export function AddSessionForm({
   const tCommon = useTranslations("common");
   const [isPending, startTransition] = useTransition();
 
-  // Session fields
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  // Session fields. The date is the working day, not the calendar day: a
+  // session written at 2 AM belongs to the shift that opened the evening
+  // before, and dating it tomorrow would detach it from the appointment.
+  const [date, setDate] = useState<Date | undefined>(() => clinicDayLocal());
   const [examination, setExamination] = useState("");
   const [bp, setBp] = useState("");
   const [pulse, setPulse] = useState("");

@@ -1,18 +1,22 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { clinicDay } from "@/lib/clinic-day";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function getDashboardData() {
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart);
-  todayEnd.setHours(23, 59, 59, 999);
+
+  // The working day, not the calendar day — at 3 AM the shift is still running
+  // and these counters must still describe it. `date` is @db.Date, so an exact
+  // match on UTC midnight selects the whole day.
+  const today = clinicDay(now);
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Build 7 day date range
-  const sevenDaysAgo = new Date(todayStart);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  // Build 7 day date range. UTC arithmetic: these are date markers, not moments.
+  const sevenDaysAgo = new Date(today.getTime() - 6 * MS_PER_DAY);
 
   const [
     totalPatients,
@@ -29,12 +33,12 @@ export async function getDashboardData() {
 
     // Today's appointment count
     prisma.appointment.count({
-      where: { date: { gte: todayStart, lte: todayEnd } },
+      where: { date: today },
     }),
 
     // Today's sessions count
     prisma.session.count({
-      where: { date: { gte: todayStart, lte: todayEnd } },
+      where: { date: today },
     }),
 
     // New patients this month
@@ -45,7 +49,7 @@ export async function getDashboardData() {
     // Today's appointments by status
     prisma.appointment.groupBy({
       by: ["status"],
-      where: { date: { gte: todayStart, lte: todayEnd } },
+      where: { date: today },
       _count: true,
     }),
 
@@ -60,14 +64,14 @@ export async function getDashboardData() {
 
     // Last 7 days appointments
     prisma.appointment.findMany({
-      where: { date: { gte: sevenDaysAgo, lte: todayEnd } },
+      where: { date: { gte: sevenDaysAgo, lte: today } },
       select: { date: true },
     }),
 
     // Clinic breakdown (today)
     prisma.appointment.groupBy({
       by: ["clinicId"],
-      where: { date: { gte: todayStart, lte: todayEnd } },
+      where: { date: today },
       _count: true,
     }),
   ]);
@@ -75,9 +79,9 @@ export async function getDashboardData() {
   // Process 7-day chart data
   const dayMap = new Map<string, number>();
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(todayStart);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().split("T")[0];
+    const key = new Date(today.getTime() - i * MS_PER_DAY)
+      .toISOString()
+      .split("T")[0];
     dayMap.set(key, 0);
   }
   for (const apt of last7DaysRaw) {

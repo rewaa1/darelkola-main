@@ -4,24 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { AppointmentStatus, AppointmentType } from "@prisma/client";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
+import { clinicDay, clinicDayString, toDateOnly } from "@/lib/clinic-day";
 
 // ===========================================
 // Date helpers
 // ===========================================
 //
-// Appointment `date` is a calendar day (@db.Date). We always represent it at
-// UTC midnight so the stored day equals the day the user picked, and so
-// "today" comparisons stay consistent no matter the server's timezone.
-
-/** Normalize a "YYYY-MM-DD" (or ISO) string to that calendar day at UTC midnight. */
-function toDateOnly(day: string) {
-  return new Date(`${day.slice(0, 10)}T00:00:00.000Z`);
-}
-
-/** The current calendar day at UTC midnight. */
-function todayDateOnly() {
-  return toDateOnly(new Date().toISOString());
-}
+// Appointment `date` is a calendar day (@db.Date), always at UTC midnight, so
+// the stored day equals the day the user picked.
+//
+// "Today" is never the calendar day — the clinic works past midnight, so the
+// working day comes from `clinicDay()`. See src/lib/clinic-day.ts.
 
 // ===========================================
 // Types
@@ -171,8 +164,10 @@ export async function bookAppointment(data: BookAppointmentInput) {
   const appointmentDay = data.date.slice(0, 10);
   const appointmentDate = toDateOnly(appointmentDay);
 
-  // Validation: Cannot book in the past (compare calendar days as strings).
-  const todayDay = new Date().toISOString().slice(0, 10);
+  // Validation: cannot book before the working day currently in progress. At
+  // 2 AM that is still yesterday's date, which is what reception needs in order
+  // to book a walk-in onto the shift that is running.
+  const todayDay = clinicDayString();
   if (appointmentDay < todayDay) {
     throw new Error("Cannot book appointments in the past");
   }
@@ -211,7 +206,7 @@ export async function bookAppointment(data: BookAppointmentInput) {
 // ===========================================
 
 export async function getTodayQueue(clinicId: string) {
-  const today = todayDateOnly();
+  const today = clinicDay();
 
   const appointments = await prisma.appointment.findMany({
     where: {
@@ -350,7 +345,7 @@ export async function checkInWithPatient(
 // ===========================================
 
 export async function callNextPatient(clinicId: string) {
-  const today = todayDateOnly();
+  const today = clinicDay();
 
   // Find next waiting patient (lowest queue number with CHECKED_IN status)
   const nextPatient = await prisma.appointment.findFirst({
@@ -410,7 +405,7 @@ export async function reorderQueue(
   newQueueNumber: number,
   clinicId: string,
 ) {
-  const today = todayDateOnly();
+  const today = clinicDay();
 
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
