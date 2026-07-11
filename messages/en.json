@@ -48,7 +48,8 @@
     "patients": "Patients",
     "appointments": "Appointments",
     "medications": "Medications",
-    "settings": "Settings"
+    "settings": "Settings",
+    "assistant": "Assistant"
   },
   "header": {
     "clinicName": "Darelkola Clinic"
@@ -63,7 +64,8 @@
     "WITH_DOCTOR": "With Doctor",
     "COMPLETED": "Completed",
     "CANCELLED": "Cancelled",
-    "NO_SHOW": "No Show"
+    "NO_SHOW": "No Show",
+    "WITH_ASSISTANT": "With Assistant"
   },
   "appointmentType": {
     "FAST_EXAMINATION": "Fast Examination",
@@ -72,7 +74,8 @@
   },
   "roles": {
     "DOCTOR": "Doctor",
-    "RECEPTIONIST": "Receptionist"
+    "RECEPTIONIST": "Receptionist",
+    "ASSISTANT": "Assistant Doctor"
   },
   "medForms": {
     "tablet": "Tablet",
@@ -177,7 +180,8 @@
     "WITH_DOCTOR": "With Doctor",
     "COMPLETED": "Done",
     "NO_SHOW": "No Show",
-    "CANCELLED": "Cancelled"
+    "CANCELLED": "Cancelled",
+    "WITH_ASSISTANT": "With Assistant"
   },
   "queue": {
     "title": "Today's Queue",
@@ -207,7 +211,10 @@
       "scheduled": "Scheduled",
       "waiting": "Waiting",
       "done": "Done"
-    }
+    },
+    "callToDoctor": "Call to doctor",
+    "withAssistant": "With Assistant",
+    "preAssessed": "Pre-assessed"
   },
   "appointmentsToast": {
     "booked": "Appointment booked!",
@@ -479,7 +486,11 @@
       "virology": "Virology",
       "drugIronPsa": "Drug / Iron / PSA",
       "immunology": "Immunology"
-    }
+    },
+    "preAssessment": "Assistant's Pre-assessment",
+    "preAssessmentBy": "By {name}",
+    "preAssessmentVitals": "Assistant's vitals",
+    "preAssessmentNone": "No pre-assessment for this visit"
   },
   "patientHistory": {
     "viewHistory": "View History",
@@ -537,23 +548,6 @@
   },
   "scheduled": {
     "noScheduled": "No scheduled appointments"
-  },
-  "patients": {
-    "title": "Patients",
-    "subtitle": "Manage patient records and medical history",
-    "newPatient": "New Patient",
-    "searchPlaceholder": "Search by name or phone...",
-    "noPatients": "No patients found.",
-    "tryDifferent": "Try a different search term",
-    "unknown": "Unknown",
-    "back": "Back",
-    "columns": {
-      "patient": "Patient",
-      "age": "Age",
-      "sex": "Sex",
-      "phone": "Phone",
-      "registered": "Registered"
-    }
   },
   "patients": {
     "title": "Patients",
@@ -650,5 +644,41 @@
       "medications": "Medications",
       "records": "Records"
     }
+  },
+  "assistant": {
+    "title": "Pre-assessment",
+    "withAssistantNow": "With Assistant Now",
+    "noPatientWithAssistant": "No patient with the assistant",
+    "callFromWaiting": "Call a patient in from the waiting room",
+    "callIn": "Call in",
+    "calling": "Calling...",
+    "sendBack": "Send back to waiting",
+    "sending": "Sending...",
+    "sentBack": "Patient sent back to the waiting room",
+    "assessment": "Assessment",
+    "labResults": "Lab Results",
+    "history": "History",
+    "vitals": "Vitals",
+    "examination": "Examination",
+    "examinationPlaceholder": "Findings from your examination...",
+    "save": "Save assessment",
+    "saving": "Saving...",
+    "saved": "Assessment saved",
+    "saveFailed": "Could not save the assessment",
+    "locked": "Locked — the patient is already with the doctor",
+    "preAssessed": "Pre-assessed",
+    "notAssessedYet": "Not assessed yet",
+    "waiting": "Waiting ({count})",
+    "noWaiting": "No patients waiting",
+    "loadingProfile": "Loading patient...",
+    "couldNotLoad": "Could not load the patient",
+    "presentHistory": "Present history",
+    "pastHistory": "Past history",
+    "familyHistory": "Family history",
+    "noHistory": "No history recorded",
+    "years": "{count} yrs",
+    "clinic": "Clinic",
+    "refresh": "Refresh",
+    "done": "Done"
   }
 }

@@ -40,6 +40,12 @@ export async function getSession(sessionId: string) {
 interface CreateSessionInput {
   date: string;
   clinicId: string;
+  // The visit this session closes, when the doctor works from the queue. Lets
+  // the session claim that visit's pre-assessment and complete the exact
+  // appointment, rather than re-deriving it from (phone, date, clinic) — which
+  // the past-midnight shift makes unreliable. Absent for a session added
+  // retrospectively from the patient profile.
+  appointmentId?: string;
   examination?: string;
   bloodPressure?: string;
   pulse?: string;
@@ -98,32 +104,48 @@ export async function createSession(
       data: { sessionId: created.id },
     });
 
-    // Auto-create a COMPLETED appointment for this session
-    const patient = await tx.personalHistory.findUnique({
-      where: { patientId },
-      select: { fullName: true, phoneNumber: true },
-    });
-
-    if (patient) {
-      // Use upsert to handle case where appointment already exists for this date
-      await tx.appointment.upsert({
-        where: {
-          patientPhone_date_clinicId: {
-            patientPhone: patient.phoneNumber || "",
-            date: sessionDate,
-            clinicId: data.clinicId,
-          },
-        },
-        update: { status: "COMPLETED" },
-        create: {
-          patientName: patient.fullName || "Unknown",
-          patientPhone: patient.phoneNumber || "",
-          patientId,
-          clinicId: data.clinicId,
-          date: sessionDate,
-          status: "COMPLETED",
-        },
+    if (data.appointmentId) {
+      // Working from the queue: claim this visit's pre-assessment (0 or 1 row —
+      // the assistant is often absent) and complete this exact appointment.
+      // Scoped by appointmentId so a pre-assessment from an earlier abandoned
+      // visit can never attach to this session.
+      await tx.preAssessment.updateMany({
+        where: { appointmentId: data.appointmentId, sessionId: null },
+        data: { sessionId: created.id },
       });
+
+      await tx.appointment.update({
+        where: { id: data.appointmentId },
+        data: { status: "COMPLETED" },
+      });
+    } else {
+      // Retrospective session from the patient profile: no visit in hand, so
+      // fall back to recording a COMPLETED appointment for the session's day.
+      const patient = await tx.personalHistory.findUnique({
+        where: { patientId },
+        select: { fullName: true, phoneNumber: true },
+      });
+
+      if (patient) {
+        await tx.appointment.upsert({
+          where: {
+            patientPhone_date_clinicId: {
+              patientPhone: patient.phoneNumber || "",
+              date: sessionDate,
+              clinicId: data.clinicId,
+            },
+          },
+          update: { status: "COMPLETED" },
+          create: {
+            patientName: patient.fullName || "Unknown",
+            patientPhone: patient.phoneNumber || "",
+            patientId,
+            clinicId: data.clinicId,
+            date: sessionDate,
+            status: "COMPLETED",
+          },
+        });
+      }
     }
 
     return created;

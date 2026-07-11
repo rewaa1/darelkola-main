@@ -31,12 +31,19 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  preAssessments PreAssessment[]
+
   @@map("users")
 }
 
+// ASSISTANT is a clinician who examines the patient before the doctor does.
+// Unlike Receptionist — a name attached to a shared login — he holds a real
+// account, because he works from his own room on his own device and his notes
+// are signed into the medical record.
 enum UserRole {
   DOCTOR
   RECEPTIONIST
+  ASSISTANT
 }
 
 // A named receptionist used purely to attribute actions (booking, patient
@@ -71,6 +78,7 @@ model Patient {
   previousMedications PreviousMedication[]
   investigations      Investigation[]
   investigationSheets InvestigationSheet[]
+  preAssessments      PreAssessment[]
   sessions            Session[]
   appointments        Appointment[]
   registeredBy        Receptionist?        @relation("RegisteredBy", fields: [registeredById], references: [id])
@@ -197,6 +205,7 @@ model Session {
   patient              Patient              @relation(fields: [patientId], references: [id])
   sessionMedications   SessionMedication[]
   investigationSheets  InvestigationSheet[]
+  preAssessment        PreAssessment?
 
   @@index([patientId])
   @@map("sessions")
@@ -217,6 +226,51 @@ model SessionMedication {
 
   @@unique([sessionId, medicationId])
   @@map("session_medications")
+}
+
+// The assistant doctor's pre-consultation note: vitals and his own examination,
+// taken after check-in and before the doctor's session exists.
+//
+// It hangs off the Appointment — the visit — and never off the Patient. That is
+// the one difference from InvestigationSheet below, and it is deliberate. A lab
+// sheet is dated and carries forward, so an unclaimed one legitimately belongs
+// to the next session. A pulse does not. Scoping to the visit is what stops a
+// reading taken at a visit the patient abandoned from surfacing weeks later as
+// though it were measured today.
+//
+// The session the doctor creates for that same appointment claims it. If the
+// patient leaves first, it stays an assessment on that visit with no session,
+// visible in the patient's history and claimable by nothing.
+model PreAssessment {
+  id            String  @id @default(cuid())
+  patientId     String  @map("patient_id")
+  appointmentId String  @unique @map("appointment_id")
+  sessionId     String? @unique @map("session_id")
+  assistantId   String? @map("assistant_id")
+
+  // Vitals as the assistant measured them. The doctor's own readings live on
+  // Session and stay empty unless he re-measures — nothing is ever copied
+  // across, so a reading always carries the name of the man who took it.
+  bloodPressure String? @map("blood_pressure")
+  pulse         String?
+  temperature   String?
+  respRate      String? @map("resp_rate")
+
+  examination String?
+
+  // No `date`: the visit's date is the appointment's. The clinic works past
+  // midnight, so a second source of truth for "which day was this" would
+  // disagree with the appointment for the last hours of every shift.
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  session     Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  assistant   User?       @relation(fields: [assistantId], references: [id])
+
+  @@index([patientId])
+  @@map("pre_assessments")
 }
 
 // Lab results. Entered by reception when the patient arrives — before the
@@ -349,15 +403,25 @@ model Appointment {
   bookedBy    Receptionist? @relation("BookedBy", fields: [bookedById], references: [id])
   checkedInBy Receptionist? @relation("CheckedInBy", fields: [checkedInById], references: [id])
 
+  // Restrict, not Cascade: an appointment a clinician examined the patient at
+  // is not a booking mistake, and deleting it must not silently take his note.
+  preAssessment PreAssessment?
+
   @@unique([patientPhone, date, clinicId])
   @@index([clinicId, date, status])
   @@index([patientId])
   @@map("appointments")
 }
 
+// WITH_ASSISTANT is transient: the patient is in the assistant's room, so the
+// doctor cannot call them. When the assistant is done they return to CHECKED_IN
+// keeping their queue number. Whether they were pre-assessed is told by the
+// PreAssessment row, not by a status — an assistant is often absent, and a
+// patient reaching the doctor without one is normal.
 enum AppointmentStatus {
   SCHEDULED
   CHECKED_IN
+  WITH_ASSISTANT
   WITH_DOCTOR
   COMPLETED
   NO_SHOW

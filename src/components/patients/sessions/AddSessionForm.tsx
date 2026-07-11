@@ -16,11 +16,13 @@ import { ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createSession } from "@/actions/sessions";
+import { clinicDayLocal } from "@/lib/clinic-day";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
 import { SessionWithRelations, MedEntry } from "./types";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
+import { PreAssessmentView, PreAssessmentLike } from "./PreAssessmentView";
 import { SessionLabResults } from "../lab/SessionLabResults";
 import { LabSheet } from "../lab/types";
 
@@ -60,6 +62,8 @@ interface AddSessionFormProps {
   labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
+  appointmentId?: string;
+  currentPreAssessment?: PreAssessmentLike | null;
   onCancel: () => void;
 }
 
@@ -69,14 +73,18 @@ export function AddSessionForm({
   labSheets,
   lastClinicId,
   clinics,
+  appointmentId,
+  currentPreAssessment,
   onCancel,
 }: AddSessionFormProps) {
   const t = useTranslations("session");
   const tCommon = useTranslations("common");
   const [isPending, startTransition] = useTransition();
 
-  // Session fields
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  // Session fields. The date is the working day, not the calendar day: a
+  // session written at 2 AM belongs to the shift that opened the evening
+  // before, and dating it tomorrow would detach it from the appointment.
+  const [date, setDate] = useState<Date | undefined>(() => clinicDayLocal());
   const [examination, setExamination] = useState("");
   const [bp, setBp] = useState("");
   const [pulse, setPulse] = useState("");
@@ -204,6 +212,7 @@ export function AddSessionForm({
         await createSession(patientId, {
           date: format(date!, "yyyy-MM-dd"),
           clinicId,
+          appointmentId,
           examination: examination || undefined,
           bloodPressure: bp || undefined,
           pulse: pulse || undefined,
@@ -239,6 +248,10 @@ export function AddSessionForm({
           {isPending ? t("creating") : t("createSession")}
         </Button>
       </div>
+
+      {/* The assistant's pre-assessment for this visit, read-only. The doctor's
+          own vitals below start empty — the two are never merged. */}
+      {currentPreAssessment && <PreAssessmentView pre={currentPreAssessment} />}
 
       {/* Clinic selector — only shown when no past appointment */}
       {!lastClinicId && (

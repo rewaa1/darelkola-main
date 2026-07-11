@@ -4,6 +4,7 @@ import {
   Medication,
   InvestigationSheet,
   ExtraInvestigation,
+  PreAssessment,
 } from "@prisma/client";
 
 export type SessionWithRelations = Session & {
@@ -11,6 +12,9 @@ export type SessionWithRelations = Session & {
   investigationSheets: (InvestigationSheet & {
     extraInvestigations: ExtraInvestigation[];
   })[];
+  // Present when the assistant pre-assessed this visit. Nullable — most visits
+  // have no assistant on duty.
+  preAssessment?: (PreAssessment & { assistant: { name: string } | null }) | null;
 };
 
 export interface MedEntry {

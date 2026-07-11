@@ -184,6 +184,11 @@ export async function getPatient(patientId: string) {
             include: { extraInvestigations: true },
             orderBy: { date: "desc" },
           },
+          // The assistant's note this session claimed, if any, so the session
+          // detail can show it alongside the doctor's own record.
+          preAssessment: {
+            include: { assistant: { select: { name: true } } },
+          },
         },
       },
       appointments: {

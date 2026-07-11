@@ -1,20 +1,22 @@
 "use client";
 
-import { Appointment } from "@prisma/client";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-import { QueueCard } from "./QueueCard";
+import { QueueCard, QueueCardAppointment } from "./QueueCard";
 
 interface QueueListProps {
-  appointments: Appointment[];
+  appointments: QueueCardAppointment[];
   onReorder: (appointmentId: string, newIndex: number) => void;
   onComplete: (appointmentId: string) => void;
   onCancel: (appointmentId: string) => void;
   onNoShow: (appointmentId: string) => void;
+  // Manual pick to the doctor. Undefined while a patient is already with the
+  // doctor, which disables the button.
+  onCallToDoctor?: (appointmentId: string) => void;
 }
 
 export function QueueList({
@@ -23,6 +25,7 @@ export function QueueList({
   onComplete,
   onCancel,
   onNoShow,
+  onCallToDoctor,
 }: QueueListProps) {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -73,6 +76,11 @@ export function QueueList({
                       onComplete={() => onComplete(appointment.id)}
                       onCancel={() => onCancel(appointment.id)}
                       onNoShow={() => onNoShow(appointment.id)}
+                      onCallToDoctor={
+                        onCallToDoctor
+                          ? () => onCallToDoctor(appointment.id)
+                          : undefined
+                      }
                     />
                   </div>
                 )}

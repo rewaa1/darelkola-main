@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations, useFormatter } from "next-intl";
 import { Clinic, Patient, PersonalHistory } from "@prisma/client";
+import { clinicDayLocal } from "@/lib/clinic-day";
 import { appointmentTypes } from "./appointment-types";
 import {
   ResponsiveDialog as Dialog,
@@ -112,7 +113,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
       patientName: "",
       patientPhone: "",
       clinicId: clinics[0]?.id ?? "",
-      date: new Date(),
+      date: clinicDayLocal(),
       type: "REGULAR_EXAMINATION",
       notes: "",
     },
@@ -367,12 +368,12 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0, 0, 0, 0))
-                        }
+                        // The shift running at 2 AM is still yesterday's, and a
+                        // walk-in arriving then must be bookable onto it.
+                        disabled={(date) => date < clinicDayLocal()}
                         captionLayout="dropdown"
-                        fromYear={new Date().getFullYear()}
-                        toYear={new Date().getFullYear() + 1}
+                        fromYear={clinicDayLocal().getFullYear()}
+                        toYear={clinicDayLocal().getFullYear() + 1}
                         initialFocus
                       />
                     </PopoverContent>

@@ -15,6 +15,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // The assistant has his own restricted surface; keep him out of the full app.
+  if (user.role === "ASSISTANT") {
+    redirect("/assistant");
+  }
+
   const receptionists = await getActiveReceptionists();
 
   return (
