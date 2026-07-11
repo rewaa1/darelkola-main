@@ -48,7 +48,8 @@
     "patients": "المرضى",
     "appointments": "المواعيد",
     "medications": "الأدوية",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "assistant": "المساعد"
   },
   "header": {
     "clinicName": "عيادة دار الكلى"
@@ -63,7 +64,8 @@
     "WITH_DOCTOR": "مع الطبيب",
     "COMPLETED": "مكتمل",
     "CANCELLED": "ملغى",
-    "NO_SHOW": "لم يحضر"
+    "NO_SHOW": "لم يحضر",
+    "WITH_ASSISTANT": "مع المساعد"
   },
   "appointmentType": {
     "FAST_EXAMINATION": "كشف مستعجل",
@@ -72,7 +74,8 @@
   },
   "roles": {
     "DOCTOR": "طبيب",
-    "RECEPTIONIST": "موظف استقبال"
+    "RECEPTIONIST": "موظف استقبال",
+    "ASSISTANT": "طبيب مساعد"
   },
   "medForms": {
     "tablet": "أقراص",
@@ -177,7 +180,8 @@
     "WITH_DOCTOR": "مع الطبيب",
     "COMPLETED": "تم",
     "NO_SHOW": "لم يحضر",
-    "CANCELLED": "ملغى"
+    "CANCELLED": "ملغى",
+    "WITH_ASSISTANT": "مع المساعد"
   },
   "queue": {
     "title": "قائمة انتظار اليوم",
@@ -207,7 +211,10 @@
       "scheduled": "مجدول",
       "waiting": "في الانتظار",
       "done": "تم"
-    }
+    },
+    "callToDoctor": "نداء إلى الطبيب",
+    "withAssistant": "مع المساعد",
+    "preAssessed": "تم الفحص المبدئي"
   },
   "appointmentsToast": {
     "booked": "تم حجز الموعد!",
@@ -479,7 +486,11 @@
       "virology": "الفيروسات",
       "drugIronPsa": "الأدوية / الحديد / PSA",
       "immunology": "المناعة"
-    }
+    },
+    "preAssessment": "الفحص المبدئي للمساعد",
+    "preAssessmentBy": "بواسطة {name}",
+    "preAssessmentVitals": "العلامات الحيوية من المساعد",
+    "preAssessmentNone": "لا يوجد فحص مبدئي لهذه الزيارة"
   },
   "patientHistory": {
     "viewHistory": "عرض السجل",
@@ -633,5 +644,41 @@
       "medications": "الأدوية",
       "records": "السجلات"
     }
+  },
+  "assistant": {
+    "title": "الفحص المبدئي",
+    "withAssistantNow": "مع المساعد الآن",
+    "noPatientWithAssistant": "لا يوجد مريض مع المساعد",
+    "callFromWaiting": "نادِ مريضًا من غرفة الانتظار",
+    "callIn": "نداء",
+    "calling": "جارٍ النداء...",
+    "sendBack": "إعادة إلى الانتظار",
+    "sending": "جارٍ الإرسال...",
+    "sentBack": "تمت إعادة المريض إلى غرفة الانتظار",
+    "assessment": "الفحص",
+    "labResults": "نتائج المعمل",
+    "history": "التاريخ المرضي",
+    "vitals": "العلامات الحيوية",
+    "examination": "الفحص",
+    "examinationPlaceholder": "نتائج فحصك...",
+    "save": "حفظ الفحص",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم حفظ الفحص",
+    "saveFailed": "تعذّر حفظ الفحص",
+    "locked": "مقفل — المريض مع الطبيب بالفعل",
+    "preAssessed": "تم الفحص المبدئي",
+    "notAssessedYet": "لم يُفحص بعد",
+    "waiting": "قائمة الانتظار ({count})",
+    "noWaiting": "لا يوجد مرضى في الانتظار",
+    "loadingProfile": "جارٍ تحميل المريض...",
+    "couldNotLoad": "تعذّر تحميل المريض",
+    "presentHistory": "التاريخ الحالي",
+    "pastHistory": "التاريخ السابق",
+    "familyHistory": "التاريخ العائلي",
+    "noHistory": "لا يوجد تاريخ مسجل",
+    "years": "{count} سنة",
+    "clinic": "العيادة",
+    "refresh": "تحديث",
+    "done": "تم"
   }
 }

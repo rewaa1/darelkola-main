@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { AppointmentStatus, AppointmentType } from "@prisma/client";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
 import { clinicDay, clinicDayString, toDateOnly } from "@/lib/clinic-day";
+import { requireRole } from "@/lib/auth";
 
 // ===========================================
 // Date helpers
@@ -216,6 +217,9 @@ export async function getTodayQueue(clinicId: string) {
     include: {
       bookedBy: { select: { name: true } },
       checkedInBy: { select: { name: true } },
+      // Presence of a row is the "pre-assessed" badge; whether it's still
+      // claimable (sessionId null) tells the assistant's side it's editable.
+      preAssessment: { select: { id: true, sessionId: true } },
     },
     orderBy: [
       { queueNumber: { sort: "asc", nulls: "last" } },
@@ -223,9 +227,11 @@ export async function getTodayQueue(clinicId: string) {
     ],
   });
 
-  // Group by status
+  // Group by status. WITH_ASSISTANT and WITH_DOCTOR are two independent
+  // single-occupancy rooms, so each surfaces at most one patient.
   const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
   const waiting = appointments.filter((a) => a.status === "CHECKED_IN");
+  const withAssistant = appointments.find((a) => a.status === "WITH_ASSISTANT");
   const withDoctor = appointments.find((a) => a.status === "WITH_DOCTOR");
   const completed = appointments.filter((a) => a.status === "COMPLETED");
 
@@ -233,6 +239,7 @@ export async function getTodayQueue(clinicId: string) {
     appointments,
     scheduled,
     waiting,
+    withAssistant,
     withDoctor,
     completed,
     stats: {
@@ -367,6 +374,115 @@ export async function callNextPatient(clinicId: string) {
     data: { status: "WITH_DOCTOR" },
   });
 
+  revalidatePath("/queue");
+  return updated;
+}
+
+// ===========================================
+// Manual pick (doctor picks a specific waiting patient)
+// ===========================================
+//
+// The doctor chooses whom to see rather than taking strict queue order, so he
+// can favour a patient the assistant has already pre-assessed. Not role-guarded
+// — reception operates the doctor's queue on a shared screen, as today.
+
+export async function callPatientToDoctor(appointmentId: string) {
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+  });
+  if (!appointment) throw new Error("Appointment not found");
+  if (appointment.status !== "CHECKED_IN") {
+    throw new Error("Patient is not in the waiting room");
+  }
+
+  // One doctor's room.
+  const busy = await prisma.appointment.findFirst({
+    where: {
+      clinicId: appointment.clinicId,
+      date: appointment.date,
+      status: "WITH_DOCTOR",
+    },
+  });
+  if (busy) throw new Error("A patient is already with the doctor");
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { status: "WITH_DOCTOR" },
+  });
+
+  revalidatePath("/queue");
+  return updated;
+}
+
+// ===========================================
+// Assistant room (pre-assessment)
+// ===========================================
+//
+// The assistant is a real login; these are his to call, so they are guarded to
+// his role. A patient in his room drops out of the doctor's waiting pool
+// automatically, because both doctor picks filter on CHECKED_IN.
+
+export async function callPatientToAssistant(appointmentId: string) {
+  await requireRole("ASSISTANT");
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+  });
+  if (!appointment) throw new Error("Appointment not found");
+  if (appointment.status !== "CHECKED_IN") {
+    throw new Error("Patient is not in the waiting room");
+  }
+
+  // Once assessed, the assistant is done with this patient — he cannot call
+  // them back in. The assessment is finished when he sends them back; from then
+  // on any correction is the doctor's to make.
+  const alreadyAssessed = await prisma.preAssessment.findUnique({
+    where: { appointmentId },
+    select: { id: true },
+  });
+  if (alreadyAssessed) {
+    throw new Error("This patient has already been assessed");
+  }
+
+  // One assistant's room, mirroring the doctor.
+  const busy = await prisma.appointment.findFirst({
+    where: {
+      clinicId: appointment.clinicId,
+      date: appointment.date,
+      status: "WITH_ASSISTANT",
+    },
+  });
+  if (busy) throw new Error("Another patient is already with the assistant");
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { status: "WITH_ASSISTANT" },
+  });
+
+  revalidatePath("/assistant");
+  revalidatePath("/queue");
+  return updated;
+}
+
+/** Send the patient back to the waiting room. The queue number is untouched, so
+ *  they keep their place; whether they were assessed is told by PreAssessment. */
+export async function finishWithAssistant(appointmentId: string) {
+  await requireRole("ASSISTANT");
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+  });
+  if (!appointment) throw new Error("Appointment not found");
+  if (appointment.status !== "WITH_ASSISTANT") {
+    throw new Error("Patient is not with the assistant");
+  }
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { status: "CHECKED_IN" },
+  });
+
+  revalidatePath("/assistant");
   revalidatePath("/queue");
   return updated;
 }

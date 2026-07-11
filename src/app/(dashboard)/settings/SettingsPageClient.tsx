@@ -354,7 +354,7 @@ function UserRow({
           className="text-xs"
         >
           <Shield className="h-3 w-3 me-1" />
-          {user.role === "DOCTOR" ? tRoles("DOCTOR") : tRoles("RECEPTIONIST")}
+          {tRoles(user.role)}
         </Badge>
         <span className="text-xs text-muted-foreground">
           {t("joinedOn", {
@@ -459,6 +459,7 @@ function AddUserForm() {
               <SelectItem value="RECEPTIONIST">
                 {tRoles("RECEPTIONIST")}
               </SelectItem>
+              <SelectItem value="ASSISTANT">{tRoles("ASSISTANT")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

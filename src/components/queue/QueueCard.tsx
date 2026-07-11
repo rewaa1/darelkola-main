@@ -15,6 +15,8 @@ import {
   UserCircle,
   Clock,
   FlaskConical,
+  Stethoscope,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PatientHistoryDialog } from "./PatientHistoryDialog";
@@ -24,22 +26,27 @@ import { typeColors } from "@/components/appointments/appointment-types";
 import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 import { toast } from "sonner";
 
+export type QueueCardAppointment = Appointment & {
+  bookedBy?: { name: string } | null;
+  checkedInBy?: { name: string } | null;
+  preAssessment?: { id: string } | null;
+};
+
 interface QueueCardProps {
-  appointment: Appointment & {
-    bookedBy?: { name: string } | null;
-    checkedInBy?: { name: string } | null;
-  };
+  appointment: QueueCardAppointment;
   isDragging?: boolean;
   onCheckIn?: () => void;
   onComplete?: () => void;
   onCancel?: () => void;
   onNoShow?: () => void;
+  onCallToDoctor?: () => void;
   showDragHandle?: boolean;
 }
 
 const statusClassName: Record<AppointmentStatus, string> = {
   SCHEDULED: "bg-slate-100 text-slate-600 border-slate-200",
   CHECKED_IN: "bg-blue-100 text-blue-700 border-blue-200",
+  WITH_ASSISTANT: "bg-indigo-100 text-indigo-700 border-indigo-200",
   WITH_DOCTOR: "bg-emerald-100 text-emerald-700 border-emerald-200",
   COMPLETED: "bg-gray-100 text-gray-500 border-gray-200",
   NO_SHOW: "bg-red-100 text-red-600 border-red-200",
@@ -53,6 +60,7 @@ export function QueueCard({
   onComplete,
   onCancel,
   onNoShow,
+  onCallToDoctor,
   showDragHandle = false,
 }: QueueCardProps) {
   const t = useTranslations("queue");
@@ -149,6 +157,15 @@ export function QueueCard({
                       {t("new")}
                     </Badge>
                   )}
+                {appointment.preAssessment && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 text-indigo-600 border-indigo-300 shrink-0"
+                  >
+                    <Stethoscope className="h-3 w-3 me-0.5" />
+                    {t("preAssessed")}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                 <Phone className="h-3 w-3 shrink-0" />
@@ -222,6 +239,16 @@ export function QueueCard({
                 >
                   <UserCircle className="h-4 w-4 me-1.5" />
                   {isCheckingIn ? "..." : t("checkIn")}
+                </Button>
+              )}
+              {appointment.status === "CHECKED_IN" && onCallToDoctor && (
+                <Button
+                  size="sm"
+                  onClick={onCallToDoctor}
+                  className="flex-1 sm:flex-none"
+                >
+                  <ArrowRight className="h-4 w-4 me-1.5 rtl:rotate-180" />
+                  {t("callToDoctor")}
                 </Button>
               )}
               {appointment.status === "WITH_DOCTOR" && onComplete && (

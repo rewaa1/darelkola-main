@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Appointment, AppointmentType, Clinic } from "@prisma/client";
+import { AppointmentType, Clinic } from "@prisma/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowRight, RefreshCw, Building2 } from "lucide-react";
@@ -14,24 +15,16 @@ import { BookingDialog, ScheduledList } from "@/components/appointments";
 import {
   bookAppointment,
   callNextPatient,
+  callPatientToDoctor,
   updateAppointmentStatus,
   reorderQueue,
   getTodayQueue,
 } from "@/actions/appointments";
 
-interface QueueData {
-  appointments: Appointment[];
-  scheduled: Appointment[];
-  waiting: Appointment[];
-  withDoctor: Appointment | undefined;
-  completed: Appointment[];
-  stats: {
-    total: number;
-    scheduled: number;
-    waiting: number;
-    completed: number;
-  };
-}
+// The server action is the single source of truth for the queue's shape, so
+// deriving the type from it keeps the client honest as the shape grows
+// (preAssessment badge, withAssistant slot).
+type QueueData = Awaited<ReturnType<typeof getTodayQueue>>;
 
 interface QueuePageClientProps {
   clinics: Clinic[];
@@ -103,6 +96,17 @@ export function QueuePageClient({
         } else {
           toast.info(tToast("noWaiting"));
         }
+        refreshQueue();
+      } catch (error) {
+        toast.error((error as Error).message);
+      }
+    });
+  };
+
+  const handleCallToDoctor = async (appointmentId: string) => {
+    startTransition(async () => {
+      try {
+        await callPatientToDoctor(appointmentId);
         refreshQueue();
       } catch (error) {
         toast.error((error as Error).message);
@@ -205,6 +209,30 @@ export function QueuePageClient({
         <QueueStats stats={data.stats} />
       </div>
 
+      {/* A patient is in the assistant's room — shown so the doctor can see
+          where they went; they return to the waiting list when the assistant
+          is done. */}
+      {data.withAssistant && (
+        <Card className="border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20">
+          <CardContent className="p-3 flex items-center gap-3">
+            {data.withAssistant.queueNumber && (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-sm">
+                {data.withAssistant.queueNumber}
+              </span>
+            )}
+            <span className="text-sm font-medium truncate">
+              {data.withAssistant.patientName}
+            </span>
+            <Badge
+              variant="outline"
+              className="ms-auto text-xs border-indigo-300 text-indigo-700"
+            >
+              {t("withAssistant")}
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Patient */}
       <CurrentPatient
         appointment={data.withDoctor ?? null}
@@ -253,6 +281,7 @@ export function QueuePageClient({
               onComplete={handleComplete}
               onCancel={handleCancel}
               onNoShow={handleNoShow}
+              onCallToDoctor={data.withDoctor ? undefined : handleCallToDoctor}
             />
           )}
         </TabsContent>

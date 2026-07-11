@@ -11,6 +11,7 @@ import { SessionWithRelations } from "./sessions/types";
 import { LabSheet } from "./lab/types";
 import { SessionDetail } from "./sessions/SessionDetail";
 import { AddSessionForm } from "./sessions/AddSessionForm";
+import { PreAssessmentLike } from "./sessions/PreAssessmentView";
 
 interface SessionsTabProps {
   patientId: string;
@@ -19,6 +20,14 @@ interface SessionsTabProps {
   labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
+  // Present only in the queue's current-patient view: the visit being worked
+  // and its (still-unclaimed) assistant pre-assessment. The doctor's session
+  // claims this visit when created.
+  appointmentId?: string;
+  currentPreAssessment?: PreAssessmentLike | null;
+  // The assistant views past sessions for context but cannot create one or
+  // change what a prescription prints — that is the doctor's alone.
+  readOnly?: boolean;
 }
 
 type View = "list" | "detail" | "create";
@@ -30,6 +39,9 @@ export function SessionsTab({
   labSheets,
   lastClinicId,
   clinics,
+  appointmentId,
+  currentPreAssessment,
+  readOnly = false,
 }: SessionsTabProps) {
   const t = useTranslations("patientTabs.sessionsTab");
   const format = useFormatter();
@@ -195,6 +207,8 @@ export function SessionsTab({
         labSheets={labSheets}
         lastClinicId={lastClinicId}
         clinics={clinics}
+        appointmentId={appointmentId}
+        currentPreAssessment={currentPreAssessment}
         onCancel={() => setView("list")}
       />
     );
@@ -206,6 +220,7 @@ export function SessionsTab({
       <SessionDetail
         session={selectedSession}
         labSheets={labSheets}
+        readOnly={readOnly}
         onBack={() => {
           setView("list");
           setSelectedSessionId(null);
@@ -223,22 +238,24 @@ export function SessionsTab({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{t("title")}</CardTitle>
-            <div className="flex gap-2">
-              {lastSession && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePrint(lastSession)}
-                >
-                  <Printer className="h-4 w-4 me-2" />
-                  {t("printLastRx")}
+            {!readOnly && (
+              <div className="flex gap-2">
+                {lastSession && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePrint(lastSession)}
+                  >
+                    <Printer className="h-4 w-4 me-2" />
+                    {t("printLastRx")}
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setView("create")}>
+                  <Plus className="h-4 w-4 me-2" />
+                  {t("newSession")}
                 </Button>
-              )}
-              <Button size="sm" onClick={() => setView("create")}>
-                <Plus className="h-4 w-4 me-2" />
-                {t("newSession")}
-              </Button>
-            </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {sessions.length === 0 ? (

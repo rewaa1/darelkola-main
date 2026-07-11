@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { differenceInYears } from "date-fns";
 import { getPatient } from "@/actions/patients";
+import { getPreAssessmentForAppointment } from "@/actions/pre-assessments";
 
 import { PersonalInfoTab } from "@/components/patients/PersonalInfoTab";
 import { HistoryTab } from "@/components/patients/HistoryTab";
@@ -70,9 +71,13 @@ export function CurrentPatient({
   const t = useTranslations("queue");
   const tTabs = useTranslations("tabs");
   const [patient, setPatient] = useState<PatientWithRelations | null>(null);
+  const [preAssessment, setPreAssessment] = useState<Awaited<
+    ReturnType<typeof getPreAssessmentForAppointment>
+  > | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const patientId = appointment?.patientId ?? null;
+  const appointmentId = appointment?.id ?? null;
 
   // The patient lives in local state, so revalidatePath from a server action
   // cannot reach it. Tabs that mutate patient data call this to reload.
@@ -83,12 +88,19 @@ export function CurrentPatient({
     }
     startTransition(async () => {
       try {
-        setPatient(await getPatient(patientId));
+        const [p, pre] = await Promise.all([
+          getPatient(patientId),
+          appointmentId
+            ? getPreAssessmentForAppointment(appointmentId)
+            : Promise.resolve(null),
+        ]);
+        setPatient(p);
+        setPreAssessment(pre);
       } catch {
         setPatient(null);
       }
     });
-  }, [patientId]);
+  }, [patientId, appointmentId]);
 
   useEffect(() => {
     loadPatient();
@@ -247,6 +259,8 @@ export function CurrentPatient({
               labSheets={current.investigationSheets}
               lastClinicId={lastClinicId}
               clinics={clinics}
+              appointmentId={appointment.id}
+              currentPreAssessment={preAssessment}
             />
           </TabsContent>
 

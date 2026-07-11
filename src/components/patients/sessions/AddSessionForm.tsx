@@ -22,6 +22,7 @@ import { searchMedications, createMedication } from "@/actions/medications";
 import { SessionWithRelations, MedEntry } from "./types";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
+import { PreAssessmentView, PreAssessmentLike } from "./PreAssessmentView";
 import { SessionLabResults } from "../lab/SessionLabResults";
 import { LabSheet } from "../lab/types";
 
@@ -61,6 +62,8 @@ interface AddSessionFormProps {
   labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
+  appointmentId?: string;
+  currentPreAssessment?: PreAssessmentLike | null;
   onCancel: () => void;
 }
 
@@ -70,6 +73,8 @@ export function AddSessionForm({
   labSheets,
   lastClinicId,
   clinics,
+  appointmentId,
+  currentPreAssessment,
   onCancel,
 }: AddSessionFormProps) {
   const t = useTranslations("session");
@@ -207,6 +212,7 @@ export function AddSessionForm({
         await createSession(patientId, {
           date: format(date!, "yyyy-MM-dd"),
           clinicId,
+          appointmentId,
           examination: examination || undefined,
           bloodPressure: bp || undefined,
           pulse: pulse || undefined,
@@ -242,6 +248,10 @@ export function AddSessionForm({
           {isPending ? t("creating") : t("createSession")}
         </Button>
       </div>
+
+      {/* The assistant's pre-assessment for this visit, read-only. The doctor's
+          own vitals below start empty — the two are never merged. */}
+      {currentPreAssessment && <PreAssessmentView pre={currentPreAssessment} />}
 
       {/* Clinic selector — only shown when no past appointment */}
       {!lastClinicId && (

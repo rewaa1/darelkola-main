@@ -10,6 +10,7 @@ import { ChevronLeft, Printer, Activity, Pill } from "lucide-react";
 import { toggleSessionMedication } from "@/actions/sessions";
 import { SessionWithRelations } from "./types";
 import { SessionLabResults } from "../lab/SessionLabResults";
+import { PreAssessmentView } from "./PreAssessmentView";
 import { LabSheet } from "../lab/types";
 
 function VitalCard({ label, value }: { label: string; value: string | null }) {
@@ -26,6 +27,8 @@ interface SessionDetailProps {
   labSheets: LabSheet[];
   onBack: () => void;
   onPrint: () => void;
+  // The assistant may read a past session but not change what it prescribes.
+  readOnly?: boolean;
 }
 
 export function SessionDetail({
@@ -33,6 +36,7 @@ export function SessionDetail({
   labSheets,
   onBack,
   onPrint,
+  readOnly = false,
 }: SessionDetailProps) {
   const t = useTranslations("session");
   const format = useFormatter();
@@ -52,13 +56,21 @@ export function SessionDetail({
           <ChevronLeft className="h-4 w-4 me-1 rtl:rotate-180" />
           {t("backToSessions")}
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onPrint}>
-            <Printer className="h-4 w-4 me-2" />
-            {t("printRx")}
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onPrint}>
+              <Printer className="h-4 w-4 me-2" />
+              {t("printRx")}
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Assistant's pre-assessment, if this visit had one — read-only, above
+          the doctor's own record, never merged into it. */}
+      {session.preAssessment && (
+        <PreAssessmentView pre={session.preAssessment} />
+      )}
 
       {/* Vitals */}
       <Card>
@@ -146,7 +158,7 @@ export function SessionDetail({
                       onCheckedChange={(checked) =>
                         handleToggle(sm.id, checked)
                       }
-                      disabled={isPending}
+                      disabled={isPending || readOnly}
                     />
                   </div>
                 </div>
