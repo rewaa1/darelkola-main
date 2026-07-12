@@ -12,17 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createSession } from "@/actions/sessions";
 import { clinicDayLocal } from "@/lib/clinic-day";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SessionWithRelations, MedEntry } from "./types";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
 import { PreAssessmentView, PreAssessmentLike } from "./PreAssessmentView";
+import { printPrescription, hasActiveMeds } from "./print-rx";
 import { SessionLabResults } from "../lab/SessionLabResults";
 import { LabSheet } from "../lab/types";
 
@@ -58,6 +69,7 @@ function collectPatientMeds(sessions: SessionWithRelations[]): MedEntry[] {
 
 interface AddSessionFormProps {
   patientId: string;
+  patientName: string;
   sessions: SessionWithRelations[];
   labSheets: LabSheet[];
   lastClinicId: string | null;
@@ -69,6 +81,7 @@ interface AddSessionFormProps {
 
 export function AddSessionForm({
   patientId,
+  patientName,
   sessions,
   labSheets,
   lastClinicId,
@@ -80,6 +93,13 @@ export function AddSessionForm({
   const t = useTranslations("session");
   const tCommon = useTranslations("common");
   const [isPending, startTransition] = useTransition();
+
+  // The session just created, held so the doctor can print its prescription
+  // straight away rather than reopening the profile. Only set when it has
+  // active medications worth printing.
+  const [createdSession, setCreatedSession] = useState<Awaited<
+    ReturnType<typeof createSession>
+  > | null>(null);
 
   // Session fields. The date is the working day, not the calendar day: a
   // session written at 2 AM belongs to the shift that opened the evening
@@ -209,7 +229,7 @@ export function AddSessionForm({
 
     startTransition(async () => {
       try {
-        await createSession(patientId, {
+        const created = await createSession(patientId, {
           date: format(date!, "yyyy-MM-dd"),
           clinicId,
           appointmentId,
@@ -229,7 +249,13 @@ export function AddSessionForm({
         });
 
         toast.success(t("created"));
-        onCancel();
+        // Offer to print the prescription now, but only when there is something
+        // to print. With no active meds, close straight to the list.
+        if (hasActiveMeds(created)) {
+          setCreatedSession(created);
+        } else {
+          onCancel();
+        }
       } catch {
         toast.error(t("createFailed"));
       }
@@ -322,6 +348,39 @@ export function AddSessionForm({
           {isPending ? t("creating") : t("createSession")}
         </Button>
       </div>
+
+      {/* After saving, offer to print the prescription. Closing by any means
+          (print, not now, or Esc) returns to the sessions list. */}
+      <AlertDialog
+        open={!!createdSession}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreatedSession(null);
+            onCancel();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("printPromptTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("printPromptBody")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("printNotNow")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (createdSession)
+                  printPrescription(createdSession, patientName);
+              }}
+            >
+              <Printer className="h-4 w-4 me-2" />
+              {t("printNow")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

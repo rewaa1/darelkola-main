@@ -13,6 +13,7 @@ import {
 } from "@/actions/appointments";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { DataTable } from "@/components/ui/data-table";
 import { CardListSkeleton, DataTableSkeleton } from "@/components/skeletons";
@@ -42,7 +43,14 @@ export function AppointmentsPageClient({
 }: AppointmentsPageClientProps) {
   const t = useTranslations("appointments");
   const tToast = useTranslations("appointmentsToast");
-  const appointmentColumns = useAppointmentColumns();
+  const { failed } = useActionErrors();
+  // Bumped after a booking / edit / delete to force both views to refetch.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const refresh = useCallback(() => setRefreshNonce((n) => n + 1), []);
+  const appointmentColumns = useAppointmentColumns({
+    clinics,
+    onChanged: refresh,
+  });
   // Filters
   const [clinicFilter, setClinicFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -51,8 +59,6 @@ export function AppointmentsPageClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
-  // Bumped after a booking to force both views to refetch.
-  const [refreshNonce, setRefreshNonce] = useState(0);
 
   const filters = useMemo<AppointmentFilterValues>(
     () => ({
@@ -95,7 +101,7 @@ export function AppointmentsPageClient({
     bookedById?: string;
   }) => {
     try {
-      await bookAppointment({
+      const res = await bookAppointment({
         patientName: formData.patientName,
         patientPhone: formData.patientPhone,
         patientId: formData.patientId,
@@ -107,10 +113,11 @@ export function AppointmentsPageClient({
         notes: formData.notes,
         bookedById: formData.bookedById,
       });
+      if (failed(res)) throw new Error("booking failed"); // toast already shown
       toast.success(tToast("booked"));
-      setRefreshNonce((n) => n + 1);
+      refresh();
     } catch (error) {
-      toast.error((error as Error).message);
+      // Re-throw so BookingDialog keeps itself open and re-enables submit.
       throw error;
     }
   };
@@ -197,7 +204,12 @@ export function AppointmentsPageClient({
         )}
 
         {mobileAppointments.map((apt) => (
-          <AppointmentCard key={apt.id} appointment={apt} />
+          <AppointmentCard
+            key={apt.id}
+            appointment={apt}
+            clinics={clinics}
+            onChanged={refresh}
+          />
         ))}
 
         {hasMore && (

@@ -13,6 +13,7 @@ import {
   upsertPreAssessment,
   getPreAssessmentForAppointment,
 } from "@/actions/pre-assessments";
+import { useActionErrors } from "@/lib/use-action-errors";
 
 type Initial = Awaited<ReturnType<typeof getPreAssessmentForAppointment>>;
 
@@ -25,6 +26,7 @@ interface Props {
 export function PreAssessmentForm({ appointmentId, initial, onSaved }: Props) {
   const t = useTranslations("assistant");
   const tSession = useTranslations("session");
+  const { failed, showError } = useActionErrors();
   const [isPending, startTransition] = useTransition();
 
   const [bp, setBp] = useState(initial?.bloodPressure ?? "");
@@ -36,17 +38,18 @@ export function PreAssessmentForm({ appointmentId, initial, onSaved }: Props) {
   const handleSave = () => {
     startTransition(async () => {
       try {
-        await upsertPreAssessment(appointmentId, {
+        const res = await upsertPreAssessment(appointmentId, {
           bloodPressure: bp,
           pulse,
           temperature,
           respRate,
           examination,
         });
+        if (failed(res)) return;
         toast.success(t("saved"));
         onSaved();
-      } catch (error) {
-        toast.error((error as Error).message || t("saveFailed"));
+      } catch {
+        showError();
       }
     });
   };

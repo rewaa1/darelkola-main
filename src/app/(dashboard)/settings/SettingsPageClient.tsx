@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   updateClinic,
@@ -95,6 +96,7 @@ function ClinicCard({
   const [name, setName] = useState(clinic.name);
   const [phone, setPhone] = useState(clinic.phone || "");
 
+  const { failed, showError } = useActionErrors();
   const hasChanges = name !== clinic.name || phone !== (clinic.phone || "");
 
   const handleSave = () => {
@@ -115,10 +117,11 @@ function ClinicCard({
     if (!confirm(t("deleteClinicConfirm", { name: clinic.name }))) return;
     startTransition(async () => {
       try {
-        await deleteClinic(clinic.id);
+        const res = await deleteClinic(clinic.id);
+        if (failed(res)) return;
         toast.success(t("clinicDeleted"));
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("clinicDeleteFailed"));
+      } catch {
+        showError();
       }
     });
   };
@@ -285,6 +288,7 @@ function UserRow({
   const format = useFormatter();
   const [isPending, startTransition] = useTransition();
 
+  const { failed, showError } = useActionErrors();
   const handleDelete = () => {
     if (
       !confirm(t("deleteUserConfirm", { name: user.name, email: user.email }))
@@ -292,10 +296,11 @@ function UserRow({
       return;
     startTransition(async () => {
       try {
-        await deleteUser(user.id);
+        const res = await deleteUser(user.id);
+        if (failed(res)) return;
         toast.success(t("userDeleted"));
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("userDeleteFailed"));
+      } catch {
+        showError();
       }
     });
   };
@@ -385,6 +390,7 @@ function AddUserForm() {
   const [role, setRole] = useState<UserRole>("RECEPTIONIST");
   const [showForm, setShowForm] = useState(false);
 
+  const { failed, showError } = useActionErrors();
   const reset = () => {
     setName("");
     setEmail("");
@@ -395,12 +401,13 @@ function AddUserForm() {
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        await createUser({ name, email, password, role });
+        const res = await createUser({ name, email, password, role });
+        if (failed(res)) return;
         toast.success(t("userCreated"));
         reset();
         setShowForm(false);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("userCreateFailed"));
+      } catch {
+        showError();
       }
     });
   };
@@ -501,18 +508,18 @@ function ReceptionistRow({ receptionist }: { receptionist: ReceptionistData }) {
   const tCommon = useTranslations("common");
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(receptionist.name);
+  const { failed, showError } = useActionErrors();
 
   const hasChanges = name.trim() !== receptionist.name && name.trim() !== "";
 
   const handleSave = () => {
     startTransition(async () => {
       try {
-        await renameReceptionist(receptionist.id, name);
+        const res = await renameReceptionist(receptionist.id, name);
+        if (failed(res)) return;
         toast.success(t("receptionistUpdated"));
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : t("receptionistUpdateFailed"),
-        );
+      } catch {
+        showError();
       }
     });
   };
@@ -520,12 +527,11 @@ function ReceptionistRow({ receptionist }: { receptionist: ReceptionistData }) {
   const handleToggleActive = (active: boolean) => {
     startTransition(async () => {
       try {
-        await setReceptionistActive(receptionist.id, active);
+        const res = await setReceptionistActive(receptionist.id, active);
+        if (failed(res)) return;
         toast.success(active ? t("receptionistEnabled") : t("receptionistDisabled"));
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : t("receptionistUpdateFailed"),
-        );
+      } catch {
+        showError();
       }
     });
   };
@@ -577,18 +583,18 @@ function AddReceptionistForm() {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const { failed, showError } = useActionErrors();
 
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        await createReceptionist({ name });
+        const res = await createReceptionist({ name });
+        if (failed(res)) return;
         toast.success(t("receptionistCreated"));
         setName("");
         setShowForm(false);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : t("receptionistCreateFailed"),
-        );
+      } catch {
+        showError();
       }
     });
   };

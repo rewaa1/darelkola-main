@@ -24,6 +24,7 @@ import { CheckInRegistrationDialog } from "./CheckInRegistrationDialog";
 import { checkInWithPatient, checkInPatient } from "@/actions/appointments";
 import { typeColors } from "@/components/appointments/appointment-types";
 import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { toast } from "sonner";
 
 export type QueueCardAppointment = Appointment & {
@@ -69,6 +70,7 @@ export function QueueCard({
   const tToast = useTranslations("appointmentsToast");
   const format = useFormatter();
   const { requireReceptionist } = useReceptionist();
+  const { failed, showError } = useActionErrors();
   const aptType = appointment.type ?? "REGULAR_EXAMINATION";
   const [showRegistration, setShowRegistration] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
@@ -91,11 +93,12 @@ export function QueueCard({
 
     setIsCheckingIn(true);
     try {
-      await checkInPatient(appointment.id, receptionistId);
+      const res = await checkInPatient(appointment.id, receptionistId);
+      if (failed(res)) return;
       toast.success(tToast("checkedIn"));
       onCheckIn?.();
-    } catch (error) {
-      toast.error((error as Error).message);
+    } catch {
+      showError();
     } finally {
       setIsCheckingIn(false);
     }
@@ -104,11 +107,16 @@ export function QueueCard({
   const handleRegistrationSuccess = async (patientId: string) => {
     setIsCheckingIn(true);
     try {
-      await checkInWithPatient(appointment.id, patientId, actingReceptionistId);
+      const res = await checkInWithPatient(
+        appointment.id,
+        patientId,
+        actingReceptionistId,
+      );
+      if (failed(res)) return;
       toast.success(tToast("registeredCheckedIn"));
       onCheckIn?.();
-    } catch (error) {
-      toast.error((error as Error).message);
+    } catch {
+      showError();
     } finally {
       setIsCheckingIn(false);
     }

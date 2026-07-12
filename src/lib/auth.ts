@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import type { User, UserRole } from "@prisma/client";
+import { actionError } from "@/lib/action-result";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -28,9 +29,7 @@ export async function getCurrentUser() {
  */
 export async function requireRole(...roles: UserRole[]): Promise<User> {
   const user = await getCurrentUser();
-  if (!user) throw new Error("Unauthorized");
-  if (!roles.includes(user.role)) {
-    throw new Error("You do not have permission to perform this action");
-  }
+  if (!user) actionError("unauthorized");
+  if (!roles.includes(user.role)) actionError("forbidden");
   return user;
 }

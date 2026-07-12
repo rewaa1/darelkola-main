@@ -39,6 +39,7 @@ import {
 import { CalendarIcon, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { createPatient } from "@/actions/patients";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 
 function buildPatientSchema(messages: {
@@ -77,6 +78,7 @@ export function NewPatientDialog({
   const tCommon = useTranslations("common");
   const tPatients = useTranslations("patients");
   const { requireReceptionist } = useReceptionist();
+  const { failed, showError } = useActionErrors();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -109,7 +111,7 @@ export function NewPatientDialog({
 
     setIsLoading(true);
     try {
-      await createPatient({
+      const res = await createPatient({
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         dateOfBirth: data.dateOfBirth
@@ -122,12 +124,13 @@ export function NewPatientDialog({
         residence: data.residence || undefined,
         registeredById: picked.receptionistId ?? undefined,
       });
+      if (failed(res)) return;
       toast.success(t("success"));
       setOpen(false);
       form.reset();
       onSuccess?.();
-    } catch (error) {
-      toast.error((error as Error).message);
+    } catch {
+      showError();
     } finally {
       setIsLoading(false);
     }

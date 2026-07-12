@@ -3,6 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import {
+  type ActionResult,
+  actionError,
+  runAction,
+} from "@/lib/action-result";
 
 // ===========================================
 // Doctor-only guard
@@ -10,10 +15,8 @@ import { revalidatePath } from "next/cache";
 
 async function assertDoctor() {
   const user = await getCurrentUser();
-  if (!user) throw new Error("Unauthorized");
-  if (user.role !== "DOCTOR") {
-    throw new Error("Only doctors can manage receptionists");
-  }
+  if (!user) actionError("unauthorized");
+  if (user.role !== "DOCTOR") actionError("doctorsOnly");
   return user;
 }
 
@@ -41,41 +44,50 @@ export async function getActiveReceptionists() {
 // Mutations (doctor-only)
 // ===========================================
 
-export async function createReceptionist(data: { name: string }) {
-  await assertDoctor();
-  const name = data.name.trim();
-  if (!name) throw new Error("Name is required");
+export async function createReceptionist(data: {
+  name: string;
+}): Promise<ActionResult> {
+  return runAction(async () => {
+    await assertDoctor();
+    const name = data.name.trim();
+    if (!name) actionError("nameRequired");
 
-  const receptionist = await prisma.receptionist.create({
-    data: { name },
+    await prisma.receptionist.create({ data: { name } });
+    revalidatePath("/settings");
   });
-  revalidatePath("/settings");
-  return receptionist;
 }
 
-export async function renameReceptionist(id: string, name: string) {
-  await assertDoctor();
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("Name is required");
+export async function renameReceptionist(
+  id: string,
+  name: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await assertDoctor();
+    const trimmed = name.trim();
+    if (!trimmed) actionError("nameRequired");
 
-  const receptionist = await prisma.receptionist.update({
-    where: { id },
-    data: { name: trimmed },
+    await prisma.receptionist.update({
+      where: { id },
+      data: { name: trimmed },
+    });
+    revalidatePath("/settings");
   });
-  revalidatePath("/settings");
-  return receptionist;
 }
 
 /**
  * Activate / deactivate a receptionist. We never hard-delete so past actions
  * keep pointing at a real name; deactivated names just drop out of the picker.
  */
-export async function setReceptionistActive(id: string, active: boolean) {
-  await assertDoctor();
-  const receptionist = await prisma.receptionist.update({
-    where: { id },
-    data: { active },
+export async function setReceptionistActive(
+  id: string,
+  active: boolean,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await assertDoctor();
+    await prisma.receptionist.update({
+      where: { id },
+      data: { active },
+    });
+    revalidatePath("/settings");
   });
-  revalidatePath("/settings");
-  return receptionist;
 }

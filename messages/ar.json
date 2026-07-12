@@ -214,7 +214,8 @@
     },
     "callToDoctor": "نداء إلى الطبيب",
     "withAssistant": "مع المساعد",
-    "preAssessed": "تم الفحص المبدئي"
+    "preAssessed": "تم الفحص المبدئي",
+    "viewProfile": "عرض الملف"
   },
   "appointmentsToast": {
     "booked": "تم حجز الموعد!",
@@ -224,7 +225,9 @@
     "cancelled": "تم إلغاء الموعد",
     "markedNoShow": "تم تعليمه كمتغيّب",
     "checkedIn": "تم تسجيل حضور المريض!",
-    "registeredCheckedIn": "تم تسجيل المريض وحضوره!"
+    "registeredCheckedIn": "تم تسجيل المريض وحضوره!",
+    "updated": "تم تحديث الموعد",
+    "updateFailed": "تعذّر تحديث الموعد"
   },
   "patient": {
     "fields": {
@@ -490,7 +493,11 @@
     "preAssessment": "الفحص المبدئي للمساعد",
     "preAssessmentBy": "بواسطة {name}",
     "preAssessmentVitals": "العلامات الحيوية من المساعد",
-    "preAssessmentNone": "لا يوجد فحص مبدئي لهذه الزيارة"
+    "preAssessmentNone": "لا يوجد فحص مبدئي لهذه الزيارة",
+    "printPromptTitle": "طباعة الروشتة؟",
+    "printPromptBody": "تم حفظ الجلسة. هل تريد طباعة الروشتة للمريض الآن؟",
+    "printNow": "طباعة الروشتة",
+    "printNotNow": "ليس الآن"
   },
   "patientHistory": {
     "viewHistory": "عرض السجل",
@@ -522,7 +529,9 @@
       "handledBy": "بواسطة",
       "bookedBy": "حجز الموعد {name}",
       "checkedInBy": "سجّل الحضور {name}"
-    }
+    },
+    "edit": "تعديل",
+    "editTitle": "تعديل الموعد"
   },
   "booking": {
     "bookAppointment": "حجز موعد",
@@ -544,7 +553,9 @@
       "phoneMin": "يجب أن يكون الهاتف 10 أرقام على الأقل",
       "selectClinic": "يرجى اختيار عيادة",
       "selectDate": "يرجى اختيار تاريخ"
-    }
+    },
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ..."
   },
   "scheduled": {
     "noScheduled": "لا توجد مواعيد مجدولة"
@@ -680,5 +691,31 @@
     "clinic": "العيادة",
     "refresh": "تحديث",
     "done": "تم"
+  },
+  "errors": {
+    "unexpected": "حدث خطأ ما، من فضلك حاول مرة أخرى.",
+    "unauthorized": "لم تسجّل الدخول.",
+    "forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء.",
+    "appointmentInPast": "لا يمكن حجز موعد في تاريخ سابق.",
+    "appointmentDuplicate": "لدى المريض بالفعل موعد في هذا اليوم بهذه العيادة.",
+    "appointmentNotFound": "لم يُعثر على الموعد.",
+    "onlyScheduledEditable": "لا يمكن تعديل إلا المواعيد المجدولة.",
+    "cannotMoveToPast": "لا يمكن نقل الموعد إلى تاريخ سابق.",
+    "notScheduled": "الموعد ليس في حالة مجدول.",
+    "notInWaitingRoom": "المريض ليس في غرفة الانتظار.",
+    "doctorRoomBusy": "يوجد مريض بالفعل مع الطبيب.",
+    "alreadyAssessed": "تم فحص هذا المريض بالفعل.",
+    "assistantRoomBusy": "يوجد مريض آخر بالفعل مع المساعد.",
+    "notWithAssistant": "المريض ليس مع المساعد.",
+    "notInQueue": "الموعد ليس في قائمة الانتظار.",
+    "registerPatientFirst": "سجّل بيانات المريض قبل تسجيل الفحص.",
+    "assessmentLocked": "الفحص مقفل — المريض مع الطبيب بالفعل.",
+    "patientPhoneExists": "يوجد مريض بهذا رقم الهاتف بالفعل.",
+    "doctorsOnly": "هذا الإجراء متاح للأطباء فقط.",
+    "cannotDeleteSelf": "لا يمكنك حذف حسابك الخاص.",
+    "nameRequired": "الاسم مطلوب.",
+    "userCreateFailed": "تعذّر إنشاء الحساب.",
+    "userDeleteFailed": "تعذّر حذف الحساب.",
+    "clinicDeleteFailed": "تعذّر حذف العيادة."
   }
 }

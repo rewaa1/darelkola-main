@@ -1,4 +1,5 @@
 export { BookingDialog } from "./BookingDialog";
+export { EditAppointmentDialog } from "./EditAppointmentDialog";
 export { ScheduledList } from "./ScheduledList";
 export { AppointmentFilters } from "./AppointmentFilters";
 export { AppointmentCard } from "./AppointmentCard";

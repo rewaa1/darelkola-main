@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Clinic } from "@prisma/client";
-import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +18,7 @@ import {
   getTodayQueue,
   callPatientToAssistant,
 } from "@/actions/appointments";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { AssistantCurrentPatient } from "./AssistantCurrentPatient";
 
 type QueueData = Awaited<ReturnType<typeof getTodayQueue>>;
@@ -36,6 +36,7 @@ export function AssistantQueueClient({
   initialData,
 }: Props) {
   const t = useTranslations("assistant");
+  const { failed, showError } = useActionErrors();
   const [selectedClinicId, setSelectedClinicId] = useState(initialClinicId);
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
@@ -55,10 +56,11 @@ export function AssistantQueueClient({
   const handleCallIn = (appointmentId: string) => {
     startTransition(async () => {
       try {
-        await callPatientToAssistant(appointmentId);
+        const res = await callPatientToAssistant(appointmentId);
+        if (failed(res)) return;
         refresh();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };

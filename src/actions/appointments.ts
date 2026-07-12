@@ -6,6 +6,11 @@ import { AppointmentStatus, AppointmentType } from "@prisma/client";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
 import { clinicDay, clinicDayString, toDateOnly } from "@/lib/clinic-day";
 import { requireRole } from "@/lib/auth";
+import {
+  type ActionResult,
+  actionError,
+  runAction,
+} from "@/lib/action-result";
 
 // ===========================================
 // Date helpers
@@ -159,47 +164,107 @@ export async function deleteAppointment(appointmentId: string) {
 // Book Appointment
 // ===========================================
 
-export async function bookAppointment(data: BookAppointmentInput) {
-  // data.date is the calendar day the user selected ("YYYY-MM-DD"). Store it
-  // at UTC midnight so it lands on exactly that day.
-  const appointmentDay = data.date.slice(0, 10);
-  const appointmentDate = toDateOnly(appointmentDay);
+export async function bookAppointment(
+  data: BookAppointmentInput,
+): Promise<ActionResult<{ appointmentId: string }>> {
+  return runAction(async () => {
+    // data.date is the calendar day the user selected ("YYYY-MM-DD"). Store it
+    // at UTC midnight so it lands on exactly that day.
+    const appointmentDay = data.date.slice(0, 10);
+    const appointmentDate = toDateOnly(appointmentDay);
 
-  // Validation: cannot book before the working day currently in progress. At
-  // 2 AM that is still yesterday's date, which is what reception needs in order
-  // to book a walk-in onto the shift that is running.
-  const todayDay = clinicDayString();
-  if (appointmentDay < todayDay) {
-    throw new Error("Cannot book appointments in the past");
-  }
+    // Validation: cannot book before the working day currently in progress. At
+    // 2 AM that is still yesterday's date, which is what reception needs in
+    // order to book a walk-in onto the shift that is running.
+    if (appointmentDay < clinicDayString()) actionError("appointmentInPast");
 
-  try {
-    const appointment = await prisma.appointment.create({
-      data: {
-        patientName: data.patientName,
-        patientPhone: data.patientPhone,
-        patientId: data.patientId,
-        clinicId: data.clinicId,
-        date: appointmentDate,
-        type: data.type ?? "REGULAR_EXAMINATION",
-        notes: data.notes,
-        status: "SCHEDULED",
-        bookedById: data.bookedById,
-      },
-    });
+    try {
+      const appointment = await prisma.appointment.create({
+        data: {
+          patientName: data.patientName,
+          patientPhone: data.patientPhone,
+          patientId: data.patientId,
+          clinicId: data.clinicId,
+          date: appointmentDate,
+          type: data.type ?? "REGULAR_EXAMINATION",
+          notes: data.notes,
+          status: "SCHEDULED",
+          bookedById: data.bookedById,
+        },
+      });
 
-    revalidatePath("/queue");
-    revalidatePath("/appointments");
-    return { success: true, appointment };
-  } catch (error) {
-    // Handle unique constraint violation
-    if ((error as { code?: string }).code === "P2002") {
-      throw new Error(
-        "Patient already has an appointment on this date at this clinic",
-      );
+      revalidatePath("/queue");
+      revalidatePath("/appointments");
+      return { appointmentId: appointment.id };
+    } catch (error) {
+      if ((error as { code?: string }).code === "P2002") {
+        actionError("appointmentDuplicate");
+      }
+      throw error;
     }
-    throw error;
-  }
+  });
+}
+
+// ===========================================
+// Update Appointment (reschedule / edit details)
+// ===========================================
+
+export type UpdateAppointmentInput = {
+  date?: string; // "YYYY-MM-DD"
+  type?: AppointmentType;
+  notes?: string;
+  clinicId?: string;
+};
+
+// Editing is for a booking that has not yet begun. Once the patient is checked
+// in (queue number assigned) or seen, moving the date would strand the queue,
+// so only SCHEDULED appointments can be edited.
+export async function updateAppointment(
+  appointmentId: string,
+  data: UpdateAppointmentInput,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "SCHEDULED") {
+      actionError("onlyScheduledEditable");
+    }
+
+    const updateData: {
+      date?: Date;
+      type?: AppointmentType;
+      notes?: string | null;
+      clinicId?: string;
+    } = {};
+
+    if (data.type) updateData.type = data.type;
+    if (data.notes !== undefined) updateData.notes = data.notes || null;
+    if (data.clinicId) updateData.clinicId = data.clinicId;
+
+    if (data.date) {
+      const day = data.date.slice(0, 10);
+      // Cannot move an appointment before the working day in progress.
+      if (day < clinicDayString()) actionError("cannotMoveToPast");
+      updateData.date = toDateOnly(day);
+    }
+
+    try {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: updateData,
+      });
+      revalidatePath("/appointments");
+      revalidatePath("/queue");
+    } catch (error) {
+      // Same (phone, date, clinic) uniqueness that guards booking.
+      if ((error as { code?: string }).code === "P2002") {
+        actionError("appointmentDuplicate");
+      }
+      throw error;
+    }
+  });
 }
 
 // ===========================================
@@ -258,43 +323,39 @@ export async function getTodayQueue(clinicId: string) {
 export async function checkInPatient(
   appointmentId: string,
   receptionistId?: string,
-) {
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "SCHEDULED") actionError("notScheduled");
+
+    // Get next queue number for today at this clinic
+    const lastInQueue = await prisma.appointment.findFirst({
+      where: {
+        clinicId: appointment.clinicId,
+        date: appointment.date,
+        queueNumber: { not: null },
+      },
+      orderBy: { queueNumber: "desc" },
+    });
+
+    const nextQueueNumber = (lastInQueue?.queueNumber ?? 0) + 1;
+
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: "CHECKED_IN",
+        queueNumber: nextQueueNumber,
+        checkedInAt: new Date(),
+        checkedInById: receptionistId,
+      },
+    });
+
+    revalidatePath("/queue");
   });
-
-  if (!appointment) {
-    throw new Error("Appointment not found");
-  }
-
-  if (appointment.status !== "SCHEDULED") {
-    throw new Error("Appointment is not in SCHEDULED status");
-  }
-
-  // Get next queue number for today at this clinic
-  const lastInQueue = await prisma.appointment.findFirst({
-    where: {
-      clinicId: appointment.clinicId,
-      date: appointment.date,
-      queueNumber: { not: null },
-    },
-    orderBy: { queueNumber: "desc" },
-  });
-
-  const nextQueueNumber = (lastInQueue?.queueNumber ?? 0) + 1;
-
-  const updated = await prisma.appointment.update({
-    where: { id: appointmentId },
-    data: {
-      status: "CHECKED_IN",
-      queueNumber: nextQueueNumber,
-      checkedInAt: new Date(),
-      checkedInById: receptionistId,
-    },
-  });
-
-  revalidatePath("/queue");
-  return updated;
 }
 
 // ===========================================
@@ -305,46 +366,42 @@ export async function checkInWithPatient(
   appointmentId: string,
   patientId: string,
   receptionistId?: string,
-) {
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "SCHEDULED") actionError("notScheduled");
+
+    // Get next queue number for today at this clinic
+    const lastInQueue = await prisma.appointment.findFirst({
+      where: {
+        clinicId: appointment.clinicId,
+        date: appointment.date,
+        queueNumber: { not: null },
+      },
+      orderBy: { queueNumber: "desc" },
+    });
+
+    const nextQueueNumber = (lastInQueue?.queueNumber ?? 0) + 1;
+
+    // Link patient and check in atomically
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: "CHECKED_IN",
+        queueNumber: nextQueueNumber,
+        patientId: patientId,
+        checkedInAt: new Date(),
+        checkedInById: receptionistId,
+      },
+    });
+
+    revalidatePath("/queue");
+    revalidatePath("/patients");
   });
-
-  if (!appointment) {
-    throw new Error("Appointment not found");
-  }
-
-  if (appointment.status !== "SCHEDULED") {
-    throw new Error("Appointment is not in SCHEDULED status");
-  }
-
-  // Get next queue number for today at this clinic
-  const lastInQueue = await prisma.appointment.findFirst({
-    where: {
-      clinicId: appointment.clinicId,
-      date: appointment.date,
-      queueNumber: { not: null },
-    },
-    orderBy: { queueNumber: "desc" },
-  });
-
-  const nextQueueNumber = (lastInQueue?.queueNumber ?? 0) + 1;
-
-  // Link patient and check in atomically
-  const updated = await prisma.appointment.update({
-    where: { id: appointmentId },
-    data: {
-      status: "CHECKED_IN",
-      queueNumber: nextQueueNumber,
-      patientId: patientId,
-      checkedInAt: new Date(),
-      checkedInById: receptionistId,
-    },
-  });
-
-  revalidatePath("/queue");
-  revalidatePath("/patients");
-  return updated;
 }
 
 // ===========================================
@@ -386,32 +443,33 @@ export async function callNextPatient(clinicId: string) {
 // can favour a patient the assistant has already pre-assessed. Not role-guarded
 // — reception operates the doctor's queue on a shared screen, as today.
 
-export async function callPatientToDoctor(appointmentId: string) {
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
-  });
-  if (!appointment) throw new Error("Appointment not found");
-  if (appointment.status !== "CHECKED_IN") {
-    throw new Error("Patient is not in the waiting room");
-  }
+export async function callPatientToDoctor(
+  appointmentId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "CHECKED_IN") actionError("notInWaitingRoom");
 
-  // One doctor's room.
-  const busy = await prisma.appointment.findFirst({
-    where: {
-      clinicId: appointment.clinicId,
-      date: appointment.date,
-      status: "WITH_DOCTOR",
-    },
-  });
-  if (busy) throw new Error("A patient is already with the doctor");
+    // One doctor's room.
+    const busy = await prisma.appointment.findFirst({
+      where: {
+        clinicId: appointment.clinicId,
+        date: appointment.date,
+        status: "WITH_DOCTOR",
+      },
+    });
+    if (busy) actionError("doctorRoomBusy");
 
-  const updated = await prisma.appointment.update({
-    where: { id: appointmentId },
-    data: { status: "WITH_DOCTOR" },
-  });
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: "WITH_DOCTOR" },
+    });
 
-  revalidatePath("/queue");
-  return updated;
+    revalidatePath("/queue");
+  });
 }
 
 // ===========================================
@@ -422,69 +480,69 @@ export async function callPatientToDoctor(appointmentId: string) {
 // his role. A patient in his room drops out of the doctor's waiting pool
 // automatically, because both doctor picks filter on CHECKED_IN.
 
-export async function callPatientToAssistant(appointmentId: string) {
-  await requireRole("ASSISTANT");
+export async function callPatientToAssistant(
+  appointmentId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRole("ASSISTANT");
 
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "CHECKED_IN") actionError("notInWaitingRoom");
+
+    // Once assessed, the assistant is done with this patient — he cannot call
+    // them back in. The assessment is finished when he sends them back; from
+    // then on any correction is the doctor's to make.
+    const alreadyAssessed = await prisma.preAssessment.findUnique({
+      where: { appointmentId },
+      select: { id: true },
+    });
+    if (alreadyAssessed) actionError("alreadyAssessed");
+
+    // One assistant's room, mirroring the doctor.
+    const busy = await prisma.appointment.findFirst({
+      where: {
+        clinicId: appointment.clinicId,
+        date: appointment.date,
+        status: "WITH_ASSISTANT",
+      },
+    });
+    if (busy) actionError("assistantRoomBusy");
+
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: "WITH_ASSISTANT" },
+    });
+
+    revalidatePath("/assistant");
+    revalidatePath("/queue");
   });
-  if (!appointment) throw new Error("Appointment not found");
-  if (appointment.status !== "CHECKED_IN") {
-    throw new Error("Patient is not in the waiting room");
-  }
-
-  // Once assessed, the assistant is done with this patient — he cannot call
-  // them back in. The assessment is finished when he sends them back; from then
-  // on any correction is the doctor's to make.
-  const alreadyAssessed = await prisma.preAssessment.findUnique({
-    where: { appointmentId },
-    select: { id: true },
-  });
-  if (alreadyAssessed) {
-    throw new Error("This patient has already been assessed");
-  }
-
-  // One assistant's room, mirroring the doctor.
-  const busy = await prisma.appointment.findFirst({
-    where: {
-      clinicId: appointment.clinicId,
-      date: appointment.date,
-      status: "WITH_ASSISTANT",
-    },
-  });
-  if (busy) throw new Error("Another patient is already with the assistant");
-
-  const updated = await prisma.appointment.update({
-    where: { id: appointmentId },
-    data: { status: "WITH_ASSISTANT" },
-  });
-
-  revalidatePath("/assistant");
-  revalidatePath("/queue");
-  return updated;
 }
 
 /** Send the patient back to the waiting room. The queue number is untouched, so
  *  they keep their place; whether they were assessed is told by PreAssessment. */
-export async function finishWithAssistant(appointmentId: string) {
-  await requireRole("ASSISTANT");
+export async function finishWithAssistant(
+  appointmentId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRole("ASSISTANT");
 
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+    if (!appointment) actionError("appointmentNotFound");
+    if (appointment.status !== "WITH_ASSISTANT") actionError("notWithAssistant");
+
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: "CHECKED_IN" },
+    });
+
+    revalidatePath("/assistant");
+    revalidatePath("/queue");
   });
-  if (!appointment) throw new Error("Appointment not found");
-  if (appointment.status !== "WITH_ASSISTANT") {
-    throw new Error("Patient is not with the assistant");
-  }
-
-  const updated = await prisma.appointment.update({
-    where: { id: appointmentId },
-    data: { status: "CHECKED_IN" },
-  });
-
-  revalidatePath("/assistant");
-  revalidatePath("/queue");
-  return updated;
 }
 
 // ===========================================
@@ -520,58 +578,54 @@ export async function reorderQueue(
   appointmentId: string,
   newQueueNumber: number,
   clinicId: string,
-) {
-  const today = clinicDay();
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const today = clinicDay();
 
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
-  });
-
-  if (!appointment?.queueNumber) {
-    throw new Error("Appointment not in queue");
-  }
-
-  const oldNumber = appointment.queueNumber;
-
-  if (oldNumber === newQueueNumber) {
-    return appointment;
-  }
-
-  // Use transaction to ensure consistency
-  await prisma.$transaction(async (tx) => {
-    if (newQueueNumber < oldNumber) {
-      // Moving up: increment those between new and old
-      await tx.appointment.updateMany({
-        where: {
-          clinicId,
-          date: today,
-          queueNumber: { gte: newQueueNumber, lt: oldNumber },
-          status: "CHECKED_IN",
-        },
-        data: { queueNumber: { increment: 1 } },
-      });
-    } else {
-      // Moving down: decrement those between old and new
-      await tx.appointment.updateMany({
-        where: {
-          clinicId,
-          date: today,
-          queueNumber: { gt: oldNumber, lte: newQueueNumber },
-          status: "CHECKED_IN",
-        },
-        data: { queueNumber: { decrement: 1 } },
-      });
-    }
-
-    // Set the target appointment's new queue number
-    await tx.appointment.update({
+    const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
-      data: { queueNumber: newQueueNumber },
     });
-  });
 
-  revalidatePath("/queue");
-  return await prisma.appointment.findUnique({ where: { id: appointmentId } });
+    if (!appointment?.queueNumber) actionError("notInQueue");
+
+    const oldNumber = appointment.queueNumber;
+    if (oldNumber === newQueueNumber) return;
+
+    // Use transaction to ensure consistency
+    await prisma.$transaction(async (tx) => {
+      if (newQueueNumber < oldNumber) {
+        // Moving up: increment those between new and old
+        await tx.appointment.updateMany({
+          where: {
+            clinicId,
+            date: today,
+            queueNumber: { gte: newQueueNumber, lt: oldNumber },
+            status: "CHECKED_IN",
+          },
+          data: { queueNumber: { increment: 1 } },
+        });
+      } else {
+        // Moving down: decrement those between old and new
+        await tx.appointment.updateMany({
+          where: {
+            clinicId,
+            date: today,
+            queueNumber: { gt: oldNumber, lte: newQueueNumber },
+            status: "CHECKED_IN",
+          },
+          data: { queueNumber: { decrement: 1 } },
+        });
+      }
+
+      // Set the target appointment's new queue number
+      await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { queueNumber: newQueueNumber },
+      });
+    });
+
+    revalidatePath("/queue");
+  });
 }
 
 // Note: No-shows are marked manually by staff using updateAppointmentStatus

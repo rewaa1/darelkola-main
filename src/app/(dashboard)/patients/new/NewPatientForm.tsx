@@ -34,6 +34,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { createPatient } from "@/actions/patients";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { useReceptionist } from "@/components/receptionist/ReceptionistProvider";
 
 function buildPatientSchema(messages: {
@@ -64,6 +65,7 @@ export function NewPatientForm() {
   const tValidation = useTranslations("patient.validation");
   const tCommon = useTranslations("common");
   const { requireReceptionist } = useReceptionist();
+  const { showError } = useActionErrors();
   const [isLoading, setIsLoading] = useState(false);
 
   const patientSchema = useMemo(
@@ -93,7 +95,7 @@ export function NewPatientForm() {
 
     setIsLoading(true);
     try {
-      const patient = await createPatient({
+      const res = await createPatient({
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         dateOfBirth: data.dateOfBirth?.toISOString(),
@@ -104,10 +106,14 @@ export function NewPatientForm() {
         residence: data.residence,
         registeredById: picked.receptionistId ?? undefined,
       });
+      if (!res.ok) {
+        showError(res.error);
+        return;
+      }
       toast.success(t("success"));
-      router.push(`/patients/${patient.id}`);
-    } catch (error) {
-      toast.error((error as Error).message);
+      router.push(`/patients/${res.data.patientId}`);
+    } catch {
+      showError();
     } finally {
       setIsLoading(false);
     }

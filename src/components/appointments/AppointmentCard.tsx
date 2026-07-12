@@ -3,12 +3,19 @@ import { User, Phone } from "lucide-react";
 import { useTranslations, useFormatter } from "next-intl";
 import Link from "next/link";
 import { AppointmentRow, statusColors, typeColors } from "./appointment-types";
+import { EditAppointmentDialog } from "./EditAppointmentDialog";
 
 interface AppointmentCardProps {
   appointment: AppointmentRow;
+  clinics: { id: string; name: string }[];
+  onChanged?: () => void;
 }
 
-export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
+export function AppointmentCard({
+  appointment: apt,
+  clinics,
+  onChanged,
+}: AppointmentCardProps) {
   const tStatus = useTranslations("status");
   const tType = useTranslations("appointmentType");
   const tCols = useTranslations("appointments.columns");
@@ -59,13 +66,22 @@ export function AppointmentCard({ appointment: apt }: AppointmentCardProps) {
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
-        <span className="text-xs text-muted-foreground">
-          {format.dateTime(new Date(apt.date), {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">
+            {format.dateTime(new Date(apt.date), {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+          {apt.status === "SCHEDULED" && (
+            <EditAppointmentDialog
+              appointment={apt}
+              clinics={clinics}
+              onUpdated={onChanged}
+            />
+          )}
+        </div>
         <Badge
           variant="outline"
           className={`text-xs ${statusColors[apt.status]}`}

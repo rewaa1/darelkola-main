@@ -10,8 +10,15 @@ import { deleteAppointment } from "@/actions/appointments";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import { AppointmentRow, statusColors, typeColors } from "./appointment-types";
+import { EditAppointmentDialog } from "./EditAppointmentDialog";
 
-function DeleteButton({ appointmentId }: { appointmentId: string }) {
+function DeleteButton({
+  appointmentId,
+  onChanged,
+}: {
+  appointmentId: string;
+  onChanged?: () => void;
+}) {
   const t = useTranslations("appointments");
   const [isPending, startTransition] = useTransition();
 
@@ -27,7 +34,7 @@ function DeleteButton({ appointmentId }: { appointmentId: string }) {
           try {
             await deleteAppointment(appointmentId);
             toast.success(t("deleted"));
-            window.location.reload();
+            onChanged?.();
           } catch {
             toast.error(t("deleteFailed"));
           }
@@ -43,8 +50,16 @@ function DeleteButton({ appointmentId }: { appointmentId: string }) {
   );
 }
 
+interface ColumnOptions {
+  clinics: { id: string; name: string }[];
+  onChanged?: () => void;
+}
+
 /** Hook returning translated, locale-aware table columns for appointments. */
-export function useAppointmentColumns(): ColumnDef<AppointmentRow>[] {
+export function useAppointmentColumns({
+  clinics,
+  onChanged,
+}: ColumnOptions): ColumnDef<AppointmentRow>[] {
   const t = useTranslations("appointments.columns");
   const tStatus = useTranslations("status");
   const tType = useTranslations("appointmentType");
@@ -168,7 +183,18 @@ export function useAppointmentColumns(): ColumnDef<AppointmentRow>[] {
     },
     {
       id: "actions",
-      cell: ({ row }) => <DeleteButton appointmentId={row.original.id} />,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-0.5">
+          {row.original.status === "SCHEDULED" && (
+            <EditAppointmentDialog
+              appointment={row.original}
+              clinics={clinics}
+              onUpdated={onChanged}
+            />
+          )}
+          <DeleteButton appointmentId={row.original.id} onChanged={onChanged} />
+        </div>
+      ),
     },
   ];
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AppointmentType, Clinic } from "@prisma/client";
 import { format } from "date-fns";
@@ -9,9 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, RefreshCw, Building2 } from "lucide-react";
+import { ArrowRight, RefreshCw, Building2, UserRound } from "lucide-react";
 import { QueueList, CurrentPatient, QueueStats } from "@/components/queue";
 import { BookingDialog, ScheduledList } from "@/components/appointments";
+import { useActionErrors } from "@/lib/use-action-errors";
 import {
   bookAppointment,
   callNextPatient,
@@ -39,6 +41,7 @@ export function QueuePageClient({
 }: QueuePageClientProps) {
   const t = useTranslations("queue");
   const tToast = useTranslations("appointmentsToast");
+  const { failed, showError } = useActionErrors();
   const [selectedClinicId, setSelectedClinicId] = useState(initialClinicId);
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
@@ -67,7 +70,7 @@ export function QueuePageClient({
     bookedById?: string;
   }) => {
     try {
-      await bookAppointment({
+      const res = await bookAppointment({
         patientName: formData.patientName,
         patientPhone: formData.patientPhone,
         patientId: formData.patientId,
@@ -79,10 +82,12 @@ export function QueuePageClient({
         notes: formData.notes,
         bookedById: formData.bookedById,
       });
+      if (failed(res)) throw new Error(res.ok ? "" : res.error);
       toast.success(tToast("booked"));
       refreshQueue(formData.clinicId);
     } catch (error) {
-      toast.error((error as Error).message);
+      // Let the dialog know the booking didn't go through (it keeps itself open
+      // and re-enables submit). The toast was already shown by `failed`.
       throw error;
     }
   };
@@ -97,8 +102,8 @@ export function QueuePageClient({
           toast.info(tToast("noWaiting"));
         }
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -106,10 +111,11 @@ export function QueuePageClient({
   const handleCallToDoctor = async (appointmentId: string) => {
     startTransition(async () => {
       try {
-        await callPatientToDoctor(appointmentId);
+        const res = await callPatientToDoctor(appointmentId);
+        if (failed(res)) return;
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -120,8 +126,8 @@ export function QueuePageClient({
         await updateAppointmentStatus(appointmentId, "COMPLETED");
         toast.success(tToast("sessionCompleted"));
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -132,8 +138,8 @@ export function QueuePageClient({
         await updateAppointmentStatus(appointmentId, "CANCELLED");
         toast.success(tToast("cancelled"));
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -144,8 +150,8 @@ export function QueuePageClient({
         await updateAppointmentStatus(appointmentId, "NO_SHOW");
         toast.success(tToast("markedNoShow"));
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -156,10 +162,15 @@ export function QueuePageClient({
   ) => {
     startTransition(async () => {
       try {
-        await reorderQueue(appointmentId, newQueueNumber, selectedClinicId);
+        const res = await reorderQueue(
+          appointmentId,
+          newQueueNumber,
+          selectedClinicId,
+        );
+        if (failed(res)) return;
         refreshQueue();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
       }
     });
   };
@@ -305,7 +316,7 @@ export function QueuePageClient({
           ) : (
             <div className="space-y-2">
               {data.completed.map((apt) => (
-                <Card key={apt.id} className="opacity-60">
+                <Card key={apt.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       {apt.queueNumber && (
@@ -313,10 +324,23 @@ export function QueuePageClient({
                           #{apt.queueNumber}
                         </span>
                       )}
-                      <span>{apt.patientName}</span>
+                      <span className="font-medium">{apt.patientName}</span>
                       <span className="text-muted-foreground">
                         {apt.patientPhone}
                       </span>
+                      {apt.patientId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          className="ms-auto shrink-0"
+                        >
+                          <Link href={`/patients/${apt.patientId}`}>
+                            <UserRound className="h-4 w-4 me-1.5" />
+                            {t("viewProfile")}
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

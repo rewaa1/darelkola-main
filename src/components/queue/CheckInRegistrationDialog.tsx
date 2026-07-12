@@ -38,6 +38,7 @@ import {
 import { CalendarIcon, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { createPatient } from "@/actions/patients";
+import { useActionErrors } from "@/lib/use-action-errors";
 
 function buildPatientSchema(messages: {
   nameMin: string;
@@ -81,6 +82,7 @@ export function CheckInRegistrationDialog({
   const tMarital = useTranslations("patient.marital");
   const tValidation = useTranslations("patient.validation");
   const tCommon = useTranslations("common");
+  const { showError } = useActionErrors();
   const [isLoading, setIsLoading] = useState(false);
 
   const patientSchema = useMemo(
@@ -109,7 +111,7 @@ export function CheckInRegistrationDialog({
   const handleSubmit = async (data: PatientFormData) => {
     setIsLoading(true);
     try {
-      const patient = await createPatient({
+      const res = await createPatient({
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         dateOfBirth: data.dateOfBirth?.toISOString(),
@@ -120,11 +122,15 @@ export function CheckInRegistrationDialog({
         residence: data.residence,
         registeredById,
       });
+      if (!res.ok) {
+        showError(res.error);
+        return;
+      }
       toast.success(t("registeredSuccess"));
-      onSuccess(patient.id);
+      onSuccess(res.data.patientId);
       onOpenChange(false);
-    } catch (error) {
-      toast.error((error as Error).message);
+    } catch {
+      showError();
     } finally {
       setIsLoading(false);
     }

@@ -214,7 +214,8 @@
     },
     "callToDoctor": "Call to doctor",
     "withAssistant": "With Assistant",
-    "preAssessed": "Pre-assessed"
+    "preAssessed": "Pre-assessed",
+    "viewProfile": "View profile"
   },
   "appointmentsToast": {
     "booked": "Appointment booked!",
@@ -224,7 +225,9 @@
     "cancelled": "Appointment cancelled",
     "markedNoShow": "Marked as no-show",
     "checkedIn": "Patient checked in!",
-    "registeredCheckedIn": "Patient registered and checked in!"
+    "registeredCheckedIn": "Patient registered and checked in!",
+    "updated": "Appointment updated",
+    "updateFailed": "Could not update the appointment"
   },
   "patient": {
     "fields": {
@@ -490,7 +493,11 @@
     "preAssessment": "Assistant's Pre-assessment",
     "preAssessmentBy": "By {name}",
     "preAssessmentVitals": "Assistant's vitals",
-    "preAssessmentNone": "No pre-assessment for this visit"
+    "preAssessmentNone": "No pre-assessment for this visit",
+    "printPromptTitle": "Print prescription?",
+    "printPromptBody": "The session was saved. Print the prescription for the patient now?",
+    "printNow": "Print prescription",
+    "printNotNow": "Not now"
   },
   "patientHistory": {
     "viewHistory": "View History",
@@ -522,7 +529,9 @@
       "handledBy": "Handled by",
       "bookedBy": "Booked by {name}",
       "checkedInBy": "Checked in by {name}"
-    }
+    },
+    "edit": "Edit",
+    "editTitle": "Edit appointment"
   },
   "booking": {
     "bookAppointment": "Book Appointment",
@@ -544,7 +553,9 @@
       "phoneMin": "Phone must be at least 10 digits",
       "selectClinic": "Please select a clinic",
       "selectDate": "Please select a date"
-    }
+    },
+    "saveChanges": "Save changes",
+    "saving": "Saving..."
   },
   "scheduled": {
     "noScheduled": "No scheduled appointments"
@@ -680,5 +691,31 @@
     "clinic": "Clinic",
     "refresh": "Refresh",
     "done": "Done"
+  },
+  "errors": {
+    "unexpected": "Something went wrong. Please try again.",
+    "unauthorized": "You are not signed in.",
+    "forbidden": "You do not have permission to do this.",
+    "appointmentInPast": "You can’t book an appointment in the past.",
+    "appointmentDuplicate": "This patient already has an appointment that day at this clinic.",
+    "appointmentNotFound": "Appointment not found.",
+    "onlyScheduledEditable": "Only scheduled appointments can be edited.",
+    "cannotMoveToPast": "You can’t move an appointment to the past.",
+    "notScheduled": "This appointment isn’t scheduled.",
+    "notInWaitingRoom": "This patient isn’t in the waiting room.",
+    "doctorRoomBusy": "A patient is already with the doctor.",
+    "alreadyAssessed": "This patient has already been assessed.",
+    "assistantRoomBusy": "Another patient is already with the assistant.",
+    "notWithAssistant": "This patient isn’t with the assistant.",
+    "notInQueue": "This appointment isn’t in the queue.",
+    "registerPatientFirst": "Register the patient before recording an assessment.",
+    "assessmentLocked": "This assessment is locked — the patient is already with the doctor.",
+    "patientPhoneExists": "A patient with this phone number already exists.",
+    "doctorsOnly": "Only doctors can do this.",
+    "cannotDeleteSelf": "You can’t delete your own account.",
+    "nameRequired": "A name is required.",
+    "userCreateFailed": "Could not create the account.",
+    "userDeleteFailed": "Could not delete the account.",
+    "clinicDeleteFailed": "Could not delete the clinic."
   }
 }

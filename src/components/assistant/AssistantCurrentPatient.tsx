@@ -15,6 +15,7 @@ import {
   getPreAssessmentForAppointment,
 } from "@/actions/pre-assessments";
 import { finishWithAssistant } from "@/actions/appointments";
+import { useActionErrors } from "@/lib/use-action-errors";
 import { PersonalInfoTab } from "@/components/patients/PersonalInfoTab";
 import { HistoryTab } from "@/components/patients/HistoryTab";
 import { ExaminationTab } from "@/components/patients/ExaminationTab";
@@ -49,6 +50,7 @@ export function AssistantCurrentPatient({
 }: Props) {
   const t = useTranslations("assistant");
   const tTabs = useTranslations("tabs");
+  const { failed, showError } = useActionErrors();
   const [patient, setPatient] = useState<PatientData>(null);
   const [preAssessment, setPreAssessment] = useState<PreAssessmentData>(null);
   const [isPending, startTransition] = useTransition();
@@ -83,11 +85,15 @@ export function AssistantCurrentPatient({
     setIsSending(true);
     (async () => {
       try {
-        await finishWithAssistant(appointment.id);
+        const res = await finishWithAssistant(appointment.id);
+        if (failed(res)) {
+          setIsSending(false);
+          return;
+        }
         toast.success(t("sentBack"));
         onDone();
-      } catch (error) {
-        toast.error((error as Error).message);
+      } catch {
+        showError();
         setIsSending(false);
       }
     })();

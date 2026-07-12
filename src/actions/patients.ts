@@ -3,6 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
+import {
+  type ActionResult,
+  actionError,
+  runAction,
+} from "@/lib/action-result";
 
 // ===========================================
 // Types
@@ -24,39 +29,38 @@ export type CreatePatientInput = {
 // Create Patient
 // ===========================================
 
-export async function createPatient(data: CreatePatientInput) {
-  // Check if phone number already exists
-  const existing = await prisma.personalHistory.findFirst({
-    where: { phoneNumber: data.phoneNumber },
-  });
+export async function createPatient(
+  data: CreatePatientInput,
+): Promise<ActionResult<{ patientId: string }>> {
+  return runAction(async () => {
+    // Check if phone number already exists
+    const existing = await prisma.personalHistory.findFirst({
+      where: { phoneNumber: data.phoneNumber },
+    });
 
-  if (existing) {
-    throw new Error("Patient with this phone number already exists");
-  }
+    if (existing) actionError("patientPhoneExists");
 
-  const patient = await prisma.patient.create({
-    data: {
-      registeredById: data.registeredById,
-      personalHistory: {
-        create: {
-          fullName: data.fullName,
-          phoneNumber: data.phoneNumber,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-          sex: data.sex,
-          maritalStatus: data.maritalStatus,
-          offsprings: data.offsprings,
-          occupation: data.occupation,
-          residence: data.residence,
+    const patient = await prisma.patient.create({
+      data: {
+        registeredById: data.registeredById,
+        personalHistory: {
+          create: {
+            fullName: data.fullName,
+            phoneNumber: data.phoneNumber,
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            sex: data.sex,
+            maritalStatus: data.maritalStatus,
+            offsprings: data.offsprings,
+            occupation: data.occupation,
+            residence: data.residence,
+          },
         },
       },
-    },
-    include: {
-      personalHistory: true,
-    },
-  });
+    });
 
-  revalidatePath("/patients");
-  return patient;
+    revalidatePath("/patients");
+    return { patientId: patient.id };
+  });
 }
 
 // ===========================================
