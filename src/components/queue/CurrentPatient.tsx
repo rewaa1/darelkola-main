@@ -28,7 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { differenceInYears } from "date-fns";
-import { getPatient } from "@/actions/patients";
+import { getPatient, type PatientMedicationRow } from "@/actions/patients";
 import { getPreAssessmentForAppointment } from "@/actions/pre-assessments";
 
 import { PersonalInfoTab } from "@/components/patients/PersonalInfoTab";
@@ -53,7 +53,11 @@ type PatientWithRelations = Patient & {
   previousMedications: PreviousMedication[];
   investigations: Investigation[];
   investigationSheets: LabSheet[];
+  // First page of the timeline; the rest load on demand in SessionsTab.
   sessions: SessionWithRelations[];
+  sessionsHasMore: boolean;
+  // Full medication history, for the medications tab and sessions sidebar.
+  medications: PatientMedicationRow[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
 
@@ -256,6 +260,8 @@ export function CurrentPatient({
               patientId={current.id}
               patientName={history?.fullName ?? ""}
               sessions={current.sessions}
+              sessionsHasMore={current.sessionsHasMore}
+              medications={current.medications}
               labSheets={current.investigationSheets}
               lastClinicId={lastClinicId}
               clinics={clinics}
@@ -265,7 +271,7 @@ export function CurrentPatient({
           </TabsContent>
 
           <TabsContent value="medications">
-            <MedicationsTab sessions={current.sessions} />
+            <MedicationsTab meds={current.medications} />
           </TabsContent>
 
           <TabsContent value="labResults">

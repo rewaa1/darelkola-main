@@ -1,5 +1,6 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
@@ -159,52 +160,123 @@ export async function getPaginatedPatients(params: {
 // Get Patient by ID (with all relations)
 // ===========================================
 
-export async function getPatient(patientId: string) {
-  const patient = await prisma.patient.findUnique({
-    where: { id: patientId },
-    include: {
-      personalHistory: true,
-      registeredBy: { select: { name: true } },
-      previousMedications: true,
-      investigations: {
-        orderBy: { date: "desc" },
-      },
-      // Every sheet the patient has, linked or not — the Lab Results tab needs
-      // the full history so the doctor can compare across visits.
-      investigationSheets: {
-        include: {
-          extraInvestigations: true,
-          session: { select: { id: true, date: true } },
-        },
-        orderBy: { date: "desc" },
-      },
-      sessions: {
-        orderBy: { date: "desc" },
-        include: {
-          sessionMedications: {
-            include: { medication: true },
-          },
-          investigationSheets: {
-            include: { extraInvestigations: true },
-            orderBy: { date: "desc" },
-          },
-          // The assistant's note this session claimed, if any, so the session
-          // detail can show it alongside the doctor's own record.
-          preAssessment: {
-            include: { assistant: { select: { name: true } } },
-          },
-        },
-      },
-      appointments: {
-        orderBy: { date: "desc" },
-        include: {
-          clinic: true,
-        },
-      },
-    },
+// How many sessions the timeline loads at a time. The rest arrive on demand via
+// getPatientSessionsPage, so opening a long-history patient no longer serializes
+// every visit up front.
+const SESSIONS_PAGE_SIZE = 5;
+
+// One session with everything the timeline and session detail render. Kept in
+// sync with SessionWithRelations in components/patients/sessions/types.ts.
+const sessionPageInclude = {
+  sessionMedications: { include: { medication: true } },
+  investigationSheets: {
+    include: { extraInvestigations: true },
+    orderBy: { date: "desc" },
+  },
+  // The assistant's note this session claimed, if any, so the session detail can
+  // show it alongside the doctor's own record.
+  preAssessment: {
+    include: { assistant: { select: { name: true } } },
+  },
+} satisfies Prisma.SessionInclude;
+
+export type PatientSessionRow = Prisma.SessionGetPayload<{
+  include: typeof sessionPageInclude;
+}>;
+
+export type PatientSessionPage = {
+  items: PatientSessionRow[];
+  hasMore: boolean;
+};
+
+/**
+ * One page of a patient's sessions, newest first. Cursor is the id of the last
+ * session already shown; omit it for the first page. Fetches one extra row to
+ * tell the caller whether a "view more" is warranted without a second count.
+ */
+export async function getPatientSessionsPage(
+  patientId: string,
+  cursor?: string,
+): Promise<PatientSessionPage> {
+  const rows = await prisma.session.findMany({
+    where: { patientId },
+    // id is the tiebreaker so the cursor is deterministic when two sessions
+    // share a date.
+    orderBy: [{ date: "desc" }, { id: "desc" }],
+    take: SESSIONS_PAGE_SIZE + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    include: sessionPageInclude,
   });
 
-  return patient;
+  const hasMore = rows.length > SESSIONS_PAGE_SIZE;
+  return { items: hasMore ? rows.slice(0, SESSIONS_PAGE_SIZE) : rows, hasMore };
+}
+
+export type PatientMedicationRow = Prisma.SessionMedicationGetPayload<{
+  include: { medication: true; session: { select: { id: true; date: true } } };
+}>;
+
+/**
+ * Every medication row across all of a patient's sessions, newest first —
+ * without the examination text, lab sheets, or pre-assessments the timeline
+ * carries. This is the full-history source the medications view and carry-
+ * forward need, kept correct even while the timeline itself is paginated.
+ */
+export async function getPatientMedications(
+  patientId: string,
+): Promise<PatientMedicationRow[]> {
+  return prisma.sessionMedication.findMany({
+    where: { session: { patientId } },
+    include: {
+      medication: true,
+      session: { select: { id: true, date: true } },
+    },
+    orderBy: { session: { date: "desc" } },
+  });
+}
+
+export async function getPatient(patientId: string) {
+  const [patient, sessionPage, medications] = await Promise.all([
+    prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        personalHistory: true,
+        registeredBy: { select: { name: true } },
+        previousMedications: true,
+        investigations: {
+          orderBy: { date: "desc" },
+        },
+        // Every sheet the patient has, linked or not — the Lab Results tab needs
+        // the full history so the doctor can compare across visits.
+        investigationSheets: {
+          include: {
+            extraInvestigations: true,
+            session: { select: { id: true, date: true } },
+          },
+          orderBy: { date: "desc" },
+        },
+        appointments: {
+          orderBy: { date: "desc" },
+          include: {
+            clinic: true,
+          },
+        },
+      },
+    }),
+    // Only the first page of the timeline, plus the full medication history —
+    // the two consumers that used to force loading every session eagerly.
+    getPatientSessionsPage(patientId),
+    getPatientMedications(patientId),
+  ]);
+
+  if (!patient) return null;
+
+  return {
+    ...patient,
+    sessions: sessionPage.items,
+    sessionsHasMore: sessionPage.hasMore,
+    medications,
+  };
 }
 
 // ===========================================

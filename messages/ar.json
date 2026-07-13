@@ -346,6 +346,10 @@
       "notesPlaceholder": "أي ملاحظات...",
       "noDetails": "لا توجد تفاصيل",
       "since": "منذ {date}",
+      "started": "بدأ في {date}",
+      "stoppedOn": "· توقف في {date}",
+      "startDate": "تاريخ البدء",
+      "stopDate": "تاريخ الإيقاف",
       "active": "فعّال",
       "inactive": "غير فعّال",
       "stopped": "متوقف",
@@ -393,7 +397,8 @@
       "active": "فعّال",
       "bpShort": "ض.د",
       "pulseShort": "النبض",
-      "tempShort": "الحرارة"
+      "tempShort": "الحرارة",
+      "viewMore": "عرض المزيد"
     },
     "labTab": {
       "title": "نتائج المعمل",

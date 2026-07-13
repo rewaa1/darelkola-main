@@ -234,6 +234,8 @@ export function AssistantCurrentPatient({
               patientId={patientId}
               patientName={history?.fullName ?? ""}
               sessions={current.sessions}
+              sessionsHasMore={current.sessionsHasMore}
+              medications={current.medications}
               labSheets={current.investigationSheets}
               lastClinicId={lastClinicId}
               clinics={clinics}
@@ -242,7 +244,7 @@ export function AssistantCurrentPatient({
           </TabsContent>
 
           <TabsContent value="medications">
-            <MedicationsTab sessions={current.sessions} />
+            <MedicationsTab meds={current.medications} />
           </TabsContent>
 
           <TabsContent value="labResults">

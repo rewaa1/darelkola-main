@@ -14,6 +14,7 @@ import {
   ExtraInvestigation,
 } from "@prisma/client";
 import { LabSheet } from "@/components/patients/lab/types";
+import type { PatientMedicationRow } from "@/actions/patients";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,11 @@ type PatientWithRelations = Patient & {
   previousMedications: PreviousMedication[];
   investigations: Investigation[];
   investigationSheets: LabSheet[];
+  // Only the first page of the timeline; the rest load on demand in SessionsTab.
   sessions: SessionWithRelations[];
+  sessionsHasMore: boolean;
+  // Full medication history, for the medications tab and the sessions sidebar.
+  medications: PatientMedicationRow[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
 
@@ -186,6 +191,8 @@ export function PatientProfile({
             patientId={patient.id}
             patientName={patient.personalHistory?.fullName ?? ""}
             sessions={patient.sessions}
+            sessionsHasMore={patient.sessionsHasMore}
+            medications={patient.medications}
             labSheets={patient.investigationSheets}
             lastClinicId={lastClinicId}
             clinics={clinics}
@@ -193,7 +200,7 @@ export function PatientProfile({
         </TabsContent>
 
         <TabsContent value="medications">
-          <MedicationsTab sessions={patient.sessions} />
+          <MedicationsTab meds={patient.medications} />
         </TabsContent>
 
         <TabsContent value="labResults">

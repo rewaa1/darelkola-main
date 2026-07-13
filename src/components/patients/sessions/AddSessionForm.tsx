@@ -29,7 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SessionWithRelations, MedEntry } from "./types";
+import { MedEntry } from "./types";
+import type { PatientMedicationRow } from "@/actions/patients";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
 import { PreAssessmentView, PreAssessmentLike } from "./PreAssessmentView";
@@ -38,26 +39,25 @@ import { SessionLabResults } from "../lab/SessionLabResults";
 import { LabSheet } from "../lab/types";
 
 // ==============================
-// Helper: collect all unique meds from sessions
+// Helper: collect each unique med from the patient's history
 // ==============================
 
-function collectPatientMeds(sessions: SessionWithRelations[]): MedEntry[] {
+// `meds` is the full history, newest first, so the first row seen for each drug
+// carries its latest dosage/frequency/active state.
+function collectPatientMeds(meds: PatientMedicationRow[]): MedEntry[] {
   const medsMap = new Map<string, MedEntry>();
 
-  // Process newest sessions first — keep latest dosage/frequency/active state
-  sessions.forEach((session) => {
-    session.sessionMedications.forEach((sm) => {
-      if (!medsMap.has(sm.medicationId)) {
-        medsMap.set(sm.medicationId, {
-          medication: sm.medication,
-          dosage: sm.dosage || sm.medication.dosage || "",
-          frequency: sm.frequency || "",
-          duration: sm.duration || "",
-          notes: sm.notes || "",
-          active: sm.active,
-        });
-      }
-    });
+  meds.forEach((sm) => {
+    if (!medsMap.has(sm.medicationId)) {
+      medsMap.set(sm.medicationId, {
+        medication: sm.medication,
+        dosage: sm.dosage || sm.medication.dosage || "",
+        frequency: sm.frequency || "",
+        duration: sm.duration || "",
+        notes: sm.notes || "",
+        active: sm.active,
+      });
+    }
   });
 
   return Array.from(medsMap.values());
@@ -70,7 +70,7 @@ function collectPatientMeds(sessions: SessionWithRelations[]): MedEntry[] {
 interface AddSessionFormProps {
   patientId: string;
   patientName: string;
-  sessions: SessionWithRelations[];
+  medications: PatientMedicationRow[];
   labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
@@ -82,7 +82,7 @@ interface AddSessionFormProps {
 export function AddSessionForm({
   patientId,
   patientName,
-  sessions,
+  medications,
   labSheets,
   lastClinicId,
   clinics,
@@ -133,9 +133,9 @@ export function AddSessionForm({
       clearError(field);
     };
 
-  // Medications — pre-populated from all past sessions
+  // Medications — pre-populated from the patient's full medication history
   const [selectedMeds, setSelectedMeds] = useState<MedEntry[]>(() =>
-    collectPatientMeds(sessions),
+    collectPatientMeds(medications),
   );
   const [medSearch, setMedSearch] = useState("");
   const [medResults, setMedResults] = useState<Medication[]>([]);

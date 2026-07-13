@@ -1,6 +1,8 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { clinicDay, toDateOnly } from "@/lib/clinic-day";
 import { revalidatePath } from "next/cache";
 
 // ==============================
@@ -69,6 +71,25 @@ export async function createSession(
 
   // Use a transaction to create session + appointment atomically
   const session = await prisma.$transaction(async (tx) => {
+    // Which of these drugs is new to this patient? The first time a drug is
+    // prescribed we stamp its start date; on later sessions the course start
+    // already lives on the earlier row, so we leave it null and let the
+    // aggregation carry it forward.
+    const medIds = data.medications?.map((m) => m.medicationId) ?? [];
+    const existingDrugIds = medIds.length
+      ? new Set(
+          (
+            await tx.sessionMedication.findMany({
+              where: {
+                session: { patientId },
+                medicationId: { in: medIds },
+              },
+              select: { medicationId: true },
+            })
+          ).map((r) => r.medicationId),
+        )
+      : new Set<string>();
+
     const created = await tx.session.create({
       data: {
         patientId,
@@ -80,14 +101,23 @@ export async function createSession(
         respRate: data.respRate,
         sessionMedications: data.medications?.length
           ? {
-              create: data.medications.map((med) => ({
-                medicationId: med.medicationId,
-                active: med.active ?? true,
-                dosage: med.dosage,
-                frequency: med.frequency,
-                duration: med.duration,
-                notes: med.notes,
-              })),
+              create: data.medications.map((med) => {
+                const active = med.active ?? true;
+                const isNew = !existingDrugIds.has(med.medicationId);
+                return {
+                  medicationId: med.medicationId,
+                  active,
+                  dosage: med.dosage,
+                  frequency: med.frequency,
+                  duration: med.duration,
+                  notes: med.notes,
+                  // Stamp the course start the first time this drug is
+                  // prescribed; if it is recorded as already stopped, stamp
+                  // the stop date too.
+                  startedAt: isNew ? sessionDate : undefined,
+                  stoppedAt: isNew && !active ? sessionDate : undefined,
+                };
+              }),
             }
           : undefined,
       },
@@ -198,20 +228,34 @@ export async function addSessionMedication(
 ) {
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
-    select: { patientId: true },
+    select: { patientId: true, date: true },
   });
+  if (!session) return;
+
+  // First time this patient is prescribed this drug? Stamp the course start.
+  const priorCount = await prisma.sessionMedication.count({
+    where: {
+      session: { patientId: session.patientId },
+      medicationId: data.medicationId,
+    },
+  });
+  const isNew = priorCount === 0;
+  const active = data.active ?? true;
+
   await prisma.sessionMedication.create({
     data: {
       sessionId,
       medicationId: data.medicationId,
-      active: data.active ?? true,
+      active,
       dosage: data.dosage,
       frequency: data.frequency,
       duration: data.duration,
       notes: data.notes,
+      startedAt: isNew ? session.date : undefined,
+      stoppedAt: isNew && !active ? session.date : undefined,
     },
   });
-  if (session) revalidatePath(`/patients/${session.patientId}`);
+  revalidatePath(`/patients/${session.patientId}`);
 }
 
 export async function toggleSessionMedication(
@@ -220,7 +264,13 @@ export async function toggleSessionMedication(
 ) {
   const sm = await prisma.sessionMedication.update({
     where: { id: sessionMedId },
-    data: { active },
+    data: {
+      active,
+      // Auto-capture the stop date when a drug is switched off; clear it when
+      // switched back on. Uses the clinic's working day (shifts run past
+      // midnight), not the calendar day. Stays editable in the medications tab.
+      stoppedAt: active ? null : clinicDay(),
+    },
     include: { session: { select: { patientId: true } } },
   });
   revalidatePath(`/patients/${sm.session.patientId}`);
@@ -242,11 +292,38 @@ export async function updateSessionMedication(
     frequency?: string;
     duration?: string;
     notes?: string;
+    // Course dates as "YYYY-MM-DD" strings from the date inputs. `null` clears
+    // the date; omitting the key leaves it untouched.
+    startedAt?: string | null;
+    stoppedAt?: string | null;
   },
 ) {
+  const { startedAt, stoppedAt, active, ...rest } = data;
+
+  const updateData: Prisma.SessionMedicationUpdateInput = { ...rest };
+  if (active !== undefined) updateData.active = active;
+  if (startedAt !== undefined) {
+    updateData.startedAt = startedAt ? toDateOnly(startedAt) : null;
+  }
+
+  // An explicit stop date always wins. Otherwise auto-manage it from the active
+  // flag: stamp the clinic's working day when deactivating (if not already
+  // stopped), clear it when reactivating.
+  if (stoppedAt !== undefined) {
+    updateData.stoppedAt = stoppedAt ? toDateOnly(stoppedAt) : null;
+  } else if (active === false) {
+    const current = await prisma.sessionMedication.findUnique({
+      where: { id: sessionMedId },
+      select: { stoppedAt: true },
+    });
+    if (current && !current.stoppedAt) updateData.stoppedAt = clinicDay();
+  } else if (active === true) {
+    updateData.stoppedAt = null;
+  }
+
   const sm = await prisma.sessionMedication.update({
     where: { id: sessionMedId },
-    data,
+    data: updateData,
     include: { session: { select: { patientId: true } } },
   });
   revalidatePath(`/patients/${sm.session.patientId}`);

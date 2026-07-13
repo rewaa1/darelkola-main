@@ -223,6 +223,14 @@ model SessionMedication {
   duration     String?
   notes        String?
 
+  // Course dates for this drug on this patient. startedAt is stamped on the
+  // first session the drug is prescribed and carried forward as the course
+  // start; stoppedAt is stamped when the drug is deactivated and cleared if it
+  // is reactivated. Both are nullable — old rows and the aggregation fall back
+  // to inferring these from session dates (see buildMedSummaries).
+  startedAt DateTime? @map("started_at") @db.Date
+  stoppedAt DateTime? @map("stopped_at") @db.Date
+
   session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   medication Medication @relation(fields: [medicationId], references: [id])
 

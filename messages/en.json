@@ -346,6 +346,10 @@
       "notesPlaceholder": "Any notes...",
       "noDetails": "No details",
       "since": "Since {date}",
+      "started": "Started {date}",
+      "stoppedOn": "· Stopped {date}",
+      "startDate": "Start date",
+      "stopDate": "Stop date",
       "active": "Active",
       "inactive": "Inactive",
       "stopped": "Stopped",
@@ -393,7 +397,8 @@
       "active": "Active",
       "bpShort": "BP",
       "pulseShort": "Pulse",
-      "tempShort": "Temp"
+      "tempShort": "Temp",
+      "viewMore": "View more"
     },
     "labTab": {
       "title": "Lab Results",

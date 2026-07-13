@@ -1,23 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { Medication } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Pill, FlaskConical, Plus } from "lucide-react";
+import { Printer, Pill, FlaskConical, Plus, Loader2 } from "lucide-react";
 import { SessionWithRelations } from "./sessions/types";
 import { LabSheet } from "./lab/types";
 import { SessionDetail } from "./sessions/SessionDetail";
 import { AddSessionForm } from "./sessions/AddSessionForm";
 import { PreAssessmentLike } from "./sessions/PreAssessmentView";
 import { printPrescription } from "./sessions/print-rx";
+import {
+  getPatientSessionsPage,
+  type PatientMedicationRow,
+} from "@/actions/patients";
 
 interface SessionsTabProps {
   patientId: string;
   patientName: string;
+  // The first page of the timeline; further pages load on demand.
   sessions: SessionWithRelations[];
+  sessionsHasMore: boolean;
+  // Full medication history, for the sidebar and carry-forward — kept correct
+  // even though the timeline above is paginated.
+  medications: PatientMedicationRow[];
   labSheets: LabSheet[];
   lastClinicId: string | null;
   clinics: { id: string; name: string }[];
@@ -37,6 +46,8 @@ export function SessionsTab({
   patientId,
   patientName,
   sessions,
+  sessionsHasMore,
+  medications,
   labSheets,
   lastClinicId,
   clinics,
@@ -51,31 +62,55 @@ export function SessionsTab({
     null,
   );
 
-  const selectedSession = sessions.find((s) => s.id === selectedSessionId);
-  const lastSession = sessions[0]; // sorted desc
+  // The timeline loads a page at a time. `sessions` is the first page from the
+  // parent; "view more" fetches the rest into `extraSessions`. Reset the extras
+  // whenever the first page changes underneath us — e.g. after a session is
+  // added or removed and the parent reloads.
+  const [extraSessions, setExtraSessions] = useState<SessionWithRelations[]>([]);
+  const [hasMore, setHasMore] = useState(sessionsHasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // Collect all medications across sessions with active status from latest session
+  const firstPageId = sessions[0]?.id;
+  useEffect(() => {
+    setExtraSessions([]);
+    setHasMore(sessionsHasMore);
+  }, [firstPageId, sessions.length, sessionsHasMore]);
+
+  const allSessions = [...sessions, ...extraSessions];
+
+  const loadMore = async () => {
+    const cursor = allSessions[allSessions.length - 1]?.id;
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const page = await getPatientSessionsPage(patientId, cursor);
+      setExtraSessions((prev) => [...prev, ...page.items]);
+      setHasMore(page.hasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const selectedSession = allSessions.find((s) => s.id === selectedSessionId);
+  const lastSession = allSessions[0]; // sorted desc
+
+  // Sidebar summary from the full medication history (not just the loaded page).
+  // A drug is "active" when its own most recent record is active — the same
+  // per-drug rule the Medications tab uses, so the two views always agree.
+  // `medications` is newest-first, so the first row seen for a drug is its
+  // latest state.
   const allMedsMap = new Map<
     string,
     { medication: Medication; activeInLast: boolean }
   >();
-  sessions.forEach((s) =>
-    s.sessionMedications.forEach((sm) => {
-      if (!allMedsMap.has(sm.medicationId)) {
-        allMedsMap.set(sm.medicationId, {
-          medication: sm.medication,
-          activeInLast: false,
-        });
-      }
-    }),
-  );
-  if (lastSession) {
-    lastSession.sessionMedications.forEach((sm) => {
-      if (sm.active && allMedsMap.has(sm.medicationId)) {
-        allMedsMap.get(sm.medicationId)!.activeInLast = true;
-      }
-    });
-  }
+  medications.forEach((m) => {
+    if (!allMedsMap.has(m.medicationId)) {
+      allMedsMap.set(m.medicationId, {
+        medication: m.medication,
+        activeInLast: m.active,
+      });
+    }
+  });
   const allMeds = Array.from(allMedsMap.values());
 
   // Print the A5 prescription positioned to match the physical Rx paper.
@@ -88,7 +123,7 @@ export function SessionsTab({
       <AddSessionForm
         patientId={patientId}
         patientName={patientName}
-        sessions={sessions}
+        medications={medications}
         labSheets={labSheets}
         lastClinicId={lastClinicId}
         clinics={clinics}
@@ -143,13 +178,13 @@ export function SessionsTab({
             )}
           </CardHeader>
           <CardContent>
-            {sessions.length === 0 ? (
+            {allSessions.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 {t("noSessions")}
               </p>
             ) : (
               <div className="space-y-2">
-                {sessions.map((session) => {
+                {allSessions.map((session) => {
                   const activeCount = session.sessionMedications.filter(
                     (sm) => sm.active,
                   ).length;
@@ -213,6 +248,21 @@ export function SessionsTab({
                     </button>
                   );
                 })}
+
+                {hasMore && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore && (
+                      <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                    )}
+                    {t("viewMore")}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
