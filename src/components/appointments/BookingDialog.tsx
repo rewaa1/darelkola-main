@@ -85,6 +85,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
   const format = useFormatter();
   const { requireReceptionist } = useReceptionist();
   const [open, setOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const bookingSchema = useMemo(
@@ -340,7 +341,7 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>{t("date")}</FormLabel>
-                  <Popover>
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -367,7 +368,10 @@ export function BookingDialog({ clinics, onBook }: BookingDialogProps) {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(d) => {
+                          field.onChange(d);
+                          setDateOpen(false);
+                        }}
                         // The shift running at 2 AM is still yesterday's, and a
                         // walk-in arriving then must be bookable onto it.
                         disabled={(date) => date < clinicDayLocal()}

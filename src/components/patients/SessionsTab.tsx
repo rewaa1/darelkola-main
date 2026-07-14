@@ -14,6 +14,10 @@ import { AddSessionForm } from "./sessions/AddSessionForm";
 import { PreAssessmentLike } from "./sessions/PreAssessmentView";
 import { printPrescription } from "./sessions/print-rx";
 import {
+  printInvestigations,
+  hasInvestigations,
+} from "./sessions/print-investigations";
+import {
   getPatientSessionsPage,
   type PatientMedicationRow,
 } from "@/actions/patients";
@@ -155,9 +159,9 @@ export function SessionsTab({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Sessions List */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="lg:col-span-2 space-y-4 min-w-0">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>{t("title")}</CardTitle>
             {!readOnly && (
               <div className="flex gap-2">
@@ -169,6 +173,18 @@ export function SessionsTab({
                   >
                     <Printer className="h-4 w-4 me-2" />
                     {t("printLastRx")}
+                  </Button>
+                )}
+                {lastSession && hasInvestigations(lastSession) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      printInvestigations(lastSession, patientName)
+                    }
+                  >
+                    <FlaskConical className="h-4 w-4 me-2" />
+                    {t("printRequests")}
                   </Button>
                 )}
                 <Button size="sm" onClick={() => setView("create")}>
@@ -198,8 +214,8 @@ export function SessionsTab({
                       }}
                       className="w-full text-start p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <div className="font-medium">
                             {format.dateTime(new Date(session.date), {
                               year: "numeric",
@@ -207,11 +223,11 @@ export function SessionsTab({
                               day: "numeric",
                             })}
                           </div>
-                          <div className="text-sm text-muted-foreground line-clamp-1">
+                          <div className="text-sm text-muted-foreground line-clamp-1 break-all">
                             {session.examination || t("noExamNotes")}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {activeCount > 0 && (
                             <Badge variant="secondary">
                               <Pill className="h-3 w-3 me-1" />

@@ -84,6 +84,7 @@ export function CheckInRegistrationDialog({
   const tCommon = useTranslations("common");
   const { showError } = useActionErrors();
   const [isLoading, setIsLoading] = useState(false);
+  const [dobOpen, setDobOpen] = useState(false);
 
   const patientSchema = useMemo(
     () =>
@@ -209,7 +210,7 @@ export function CheckInRegistrationDialog({
                           className="flex-1"
                         />
                       </FormControl>
-                      <Popover>
+                      <Popover open={dobOpen} onOpenChange={setDobOpen}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="icon">
                             <CalendarIcon className="h-4 w-4" />
@@ -219,7 +220,10 @@ export function CheckInRegistrationDialog({
                           <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={(d) => {
+                              field.onChange(d);
+                              setDobOpen(false);
+                            }}
                             disabled={(date) => date > new Date()}
                             captionLayout="dropdown"
                             fromYear={1920}

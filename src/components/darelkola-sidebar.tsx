@@ -27,6 +27,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 // `key` maps to the "nav" translation namespace; labels are resolved at render.
@@ -78,6 +79,10 @@ export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const locale = useLocale() as Locale;
+  // On mobile the sidebar is an overlay sheet; close it after a nav choice so
+  // the selected page isn't hidden behind it. No-op on desktop.
+  const { setOpenMobile } = useSidebar();
+  const closeMobile = () => setOpenMobile(false);
   // In RTL the sidebar must dock to the right; the shadcn Sidebar uses a
   // physical `side` prop that doesn't follow `dir`, so we set it explicitly.
   const side = getDirection(locale) === "rtl" ? "right" : "left";
@@ -91,7 +96,7 @@ export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/dashboard">
+              <Link href="/dashboard" onClick={closeMobile}>
                 <Stethoscope className="!size-5 text-primary" />
                 <span className="text-base font-semibold">Darelkola</span>
               </Link>
@@ -113,7 +118,7 @@ export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
                     isActive={pathname === item.url}
                     tooltip={t(item.key)}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={closeMobile}>
                       <item.icon />
                       <span>{t(item.key)}</span>
                     </Link>
@@ -135,7 +140,7 @@ export function DarelkolaSidebar({ user, ...props }: DarelkolaSidebarProps) {
                     isActive={pathname === item.url}
                     tooltip={t(item.key)}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={closeMobile}>
                       <item.icon />
                       <span>{t(item.key)}</span>
                     </Link>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +53,7 @@ export function SessionDetailsCard({
   errors = {},
 }: SessionDetailsCardProps) {
   const t = useTranslations("session");
+  const [dateOpen, setDateOpen] = useState(false);
   return (
     <Card>
       <CardHeader>
@@ -69,7 +73,7 @@ export function SessionDetailsCard({
               }}
               className={`flex-1 ${errors.date ? "border-destructive" : ""}`}
             />
-            <Popover>
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="icon">
                   <CalendarIcon className="h-4 w-4" />
@@ -79,7 +83,10 @@ export function SessionDetailsCard({
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={setDate}
+                  onSelect={(d) => {
+                    setDate(d);
+                    setDateOpen(false);
+                  }}
                   captionLayout="dropdown"
                   fromYear={2020}
                   toYear={new Date().getFullYear()}

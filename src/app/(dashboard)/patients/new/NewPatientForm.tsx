@@ -67,6 +67,7 @@ export function NewPatientForm() {
   const { requireReceptionist } = useReceptionist();
   const { showError } = useActionErrors();
   const [isLoading, setIsLoading] = useState(false);
+  const [dobOpen, setDobOpen] = useState(false);
 
   const patientSchema = useMemo(
     () =>
@@ -188,7 +189,7 @@ export function NewPatientForm() {
                           className="flex-1"
                         />
                       </FormControl>
-                      <Popover>
+                      <Popover open={dobOpen} onOpenChange={setDobOpen}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="icon">
                             <CalendarIcon className="h-4 w-4" />
@@ -198,7 +199,10 @@ export function NewPatientForm() {
                           <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={(d) => {
+                              field.onChange(d);
+                              setDobOpen(false);
+                            }}
                             disabled={(date) => date > new Date()}
                             captionLayout="dropdown"
                             fromYear={1920}

@@ -391,11 +391,17 @@
       "pending": "قيد الانتظار",
       "resulted": "ظهرت النتيجة",
       "statusFailed": "فشل تحديث الحالة",
-      "requestRemoved": "تم حذف الطلب"
+      "requestRemoved": "تم حذف الطلب",
+      "addResult": "إضافة نتيجة",
+      "addResultFor": "نتيجة — {name}",
+      "saveResult": "حفظ النتيجة",
+      "markPending": "إعادة إلى قيد الانتظار",
+      "resultAdded": "تمت إضافة نتيجة {name}"
     },
     "sessionsTab": {
       "title": "الجلسات",
       "printLastRx": "طباعة آخر روشتة",
+      "printRequests": "طباعة الطلبات",
       "newSession": "جلسة جديدة",
       "noSessions": "لا توجد جلسات بعد",
       "noExamNotes": "لا توجد ملاحظات فحص",

@@ -57,6 +57,7 @@ export function EditAppointmentDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   const [date, setDate] = useState<Date>(new Date(appointment.date));
+  const [dateOpen, setDateOpen] = useState(false);
   const [type, setType] = useState<AppointmentType>(appointment.type);
   const [clinicId, setClinicId] = useState(appointment.clinicId);
   const [notes, setNotes] = useState(appointment.notes ?? "");
@@ -163,7 +164,7 @@ export function EditAppointmentDialog({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">{t("date")}</label>
-            <Popover>
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -181,7 +182,10 @@ export function EditAppointmentDialog({
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(d) => d && setDate(d)}
+                  onSelect={(d) => {
+                    if (d) setDate(d);
+                    setDateOpen(false);
+                  }}
                   // Past is the day already in progress; can't move earlier.
                   disabled={(d) => d < clinicDayLocal()}
                   captionLayout="dropdown"

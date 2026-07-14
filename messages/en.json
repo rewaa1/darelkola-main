@@ -391,11 +391,17 @@
       "pending": "Pending",
       "resulted": "Resulted",
       "statusFailed": "Failed to update status",
-      "requestRemoved": "Request removed"
+      "requestRemoved": "Request removed",
+      "addResult": "Add Result",
+      "addResultFor": "Result — {name}",
+      "saveResult": "Save Result",
+      "markPending": "Mark as pending",
+      "resultAdded": "{name} result added"
     },
     "sessionsTab": {
       "title": "Sessions",
       "printLastRx": "Print Last Rx",
+      "printRequests": "Print Requests",
       "newSession": "New Session",
       "noSessions": "No sessions yet",
       "noExamNotes": "No examination notes",

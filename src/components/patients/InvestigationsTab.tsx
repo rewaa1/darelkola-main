@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -44,6 +43,7 @@ import {
   CalendarIcon,
   CheckCircle2,
   FlaskConical,
+  Undo2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -54,6 +54,10 @@ import {
   removeSessionInvestigation,
   type PatientInvestigationRow,
 } from "@/actions/investigations";
+import { createInvestigationSheets } from "@/actions/investigation-sheets";
+import { InvestigationSheetsEditor } from "./lab/InvestigationSheetsEditor";
+import { InvestigationSheetEntry } from "./lab/types";
+import { clinicDayLocal } from "@/lib/clinic-day";
 import { UploadButton } from "@/lib/uploadthing";
 import { investigationSchema, getFieldErrors } from "@/lib/validation";
 
@@ -141,6 +145,7 @@ export function InvestigationsTab({
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
+  const [dateOpen, setDateOpen] = useState(false);
   const [invest, setInvest] = useState("");
   const [report, setReport] = useState("");
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -177,6 +182,12 @@ export function InvestigationsTab({
           fileUrl: fileUrl || undefined,
           fileName: fileName || undefined,
         });
+        // Entered as the result of a doctor's request? Close the loop: the
+        // request moves from pending to resulted.
+        if (resultTarget) {
+          await setInvestigationResulted(resultTarget.id, true);
+          setResultTarget(null);
+        }
         resetForm();
         setDialogOpen(false);
         toast.success(t("added"));
@@ -201,6 +212,63 @@ export function InvestigationsTab({
     setFileUrl(null);
     setFileName(null);
     setUploadProgress(null);
+  };
+
+  // ---- Result entry for a requested investigation ----
+  // The entry form depends on the test's category: LAB opens the structured
+  // lab-sheet editor (the result lands in the Lab Results tab); anything else
+  // (imaging, procedures) opens the file/report dialog above, prefilled with
+  // the test's name. Saving either marks the request RESULTED.
+
+  // Non-LAB target: reuses the generic investigation dialog.
+  const [resultTarget, setResultTarget] =
+    useState<PatientInvestigationRow | null>(null);
+  // LAB target: opens the lab-sheet dialog.
+  const [labTarget, setLabTarget] = useState<PatientInvestigationRow | null>(
+    null,
+  );
+  const [labDrafts, setLabDrafts] = useState<InvestigationSheetEntry[]>([]);
+
+  const openAddResult = (r: PatientInvestigationRow) => {
+    if (r.investigation.category === "LAB") {
+      setLabDrafts([{ date: clinicDayLocal(), values: {}, extras: [] }]);
+      setLabTarget(r);
+    } else {
+      setResultTarget(r);
+      setInvest(r.investigation.name);
+      setDate(clinicDayLocal());
+      setDialogOpen(true);
+    }
+  };
+
+  // A sheet with no values and no named extras would save as an empty row.
+  const usableLabDrafts = labDrafts.filter(
+    (d) =>
+      Object.values(d.values).some((v) => v.trim()) ||
+      d.extras.some((e) => e.name.trim()),
+  );
+
+  const handleSaveLabResult = () => {
+    if (!labTarget || usableLabDrafts.length === 0) return;
+    const target = labTarget;
+    startTransition(async () => {
+      try {
+        await createInvestigationSheets(
+          patientId,
+          usableLabDrafts.map((d) => ({
+            date: format(d.date, "yyyy-MM-dd"),
+            values: d.values,
+            extras: d.extras,
+          })),
+        );
+        await setInvestigationResulted(target.id, true);
+        setLabTarget(null);
+        setLabDrafts([]);
+        toast.success(t("resultAdded", { name: target.investigation.name }));
+      } catch {
+        toast.error(t("addFailed"));
+      }
+    });
   };
 
   return (
@@ -250,16 +318,34 @@ export function InvestigationsTab({
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {resulted ? t("resulted") : t("pending")}
-                      </span>
-                      <Switch
-                        checked={resulted}
-                        onCheckedChange={(checked) =>
-                          handleResulted(r.id, checked)
-                        }
-                        disabled={isPending}
-                      />
+                      {resulted ? (
+                        <>
+                          <Badge className="bg-emerald-600">
+                            {t("resulted")}
+                          </Badge>
+                          {/* Undo an accidental "resulted" — back to pending */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title={t("markPending")}
+                            onClick={() => handleResulted(r.id, false)}
+                            disabled={isPending}
+                          >
+                            <Undo2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAddResult(r)}
+                          disabled={isPending}
+                        >
+                          <Plus className="h-4 w-4 me-1" />
+                          {t("addResult")}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -285,7 +371,10 @@ export function InvestigationsTab({
           open={dialogOpen}
           onOpenChange={(open) => {
             setDialogOpen(open);
-            if (!open) resetForm();
+            if (!open) {
+              resetForm();
+              setResultTarget(null);
+            }
           }}
         >
           <DialogTrigger asChild>
@@ -316,7 +405,7 @@ export function InvestigationsTab({
                     }}
                     className={`flex-1 ${errors.date ? "border-destructive" : ""}`}
                   />
-                  <Popover>
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="icon">
                         <CalendarIcon className="h-4 w-4" />
@@ -326,7 +415,10 @@ export function InvestigationsTab({
                       <Calendar
                         mode="single"
                         selected={date}
-                        onSelect={setDate}
+                        onSelect={(d) => {
+                          setDate(d);
+                          setDateOpen(false);
+                        }}
                         captionLayout="dropdown"
                         fromYear={2020}
                         toYear={new Date().getFullYear()}
@@ -603,6 +695,46 @@ export function InvestigationsTab({
           )}
         </LightboxContent>
       </Lightbox>
+
+      {/* LAB result entry — the structured sheet editor, same as the Lab
+          Results tab. Saving files the sheet under Lab Results and flips the
+          request to resulted. */}
+      <Dialog
+        open={!!labTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLabTarget(null);
+            setLabDrafts([]);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {labTarget
+                ? t("addResultFor", { name: labTarget.investigation.name })
+                : t("addResult")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[65vh] overflow-y-auto pe-1">
+            <InvestigationSheetsEditor
+              sheets={labDrafts}
+              onChange={setLabDrafts}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setLabTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={handleSaveLabResult}
+              disabled={isPending || usableLabDrafts.length === 0}
+            >
+              {isPending ? t("adding") : t("saveResult")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
