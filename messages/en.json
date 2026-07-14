@@ -384,7 +384,14 @@
       "fileTypeError": "Only images (JPEG, PNG, WebP, GIF) and PDFs are allowed",
       "viewFile": "View file",
       "viewImage": "View image",
-      "openOriginal": "Open original"
+      "openOriginal": "Open original",
+      "requested": "Requested Investigations",
+      "pendingCount": "{count} pending",
+      "requestedOn": "Requested {date}",
+      "pending": "Pending",
+      "resulted": "Resulted",
+      "statusFailed": "Failed to update status",
+      "requestRemoved": "Request removed"
     },
     "sessionsTab": {
       "title": "Sessions",
@@ -502,7 +509,26 @@
     "printPromptTitle": "Print prescription?",
     "printPromptBody": "The session was saved. Print the prescription for the patient now?",
     "printNow": "Print prescription",
-    "printNotNow": "Not now"
+    "printNotNow": "Not now",
+    "requestedInvestigations": "Requested Investigations",
+    "requestedCount": "{count} requested",
+    "searchInvestPlaceholder": "Search tests to request or type to add new...",
+    "createInvest": "+ Create \"{name}\"",
+    "createInvestFailed": "Failed to create investigation",
+    "category": "Category",
+    "selectCategory": "Select category",
+    "investNotesPlaceholder": "Note (e.g. fasting)",
+    "noInvestRequested": "No investigations requested",
+    "pending": "Pending",
+    "resulted": "Resulted",
+    "resultedOn": "Resulted {date}",
+    "printRequests": "Print Requests"
+  },
+  "investCategories": {
+    "LAB": "Lab",
+    "IMAGING": "Imaging",
+    "PROCEDURE": "Procedure",
+    "OTHER": "Other"
   },
   "patientHistory": {
     "viewHistory": "View History",

@@ -6,11 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, Printer, Activity, Pill } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ChevronLeft,
+  Printer,
+  Activity,
+  Pill,
+  FlaskConical,
+} from "lucide-react";
 import { toggleSessionMedication } from "@/actions/sessions";
+import { setInvestigationResulted } from "@/actions/investigations";
 import { SessionWithRelations } from "./types";
 import { SessionLabResults } from "../lab/SessionLabResults";
 import { PreAssessmentView } from "./PreAssessmentView";
+import { printInvestigations } from "./print-investigations";
 import { LabSheet } from "../lab/types";
 
 function VitalCard({ label, value }: { label: string; value: string | null }) {
@@ -24,6 +33,7 @@ function VitalCard({ label, value }: { label: string; value: string | null }) {
 
 interface SessionDetailProps {
   session: SessionWithRelations;
+  patientName: string;
   labSheets: LabSheet[];
   onBack: () => void;
   onPrint: () => void;
@@ -33,18 +43,28 @@ interface SessionDetailProps {
 
 export function SessionDetail({
   session,
+  patientName,
   labSheets,
   onBack,
   onPrint,
   readOnly = false,
 }: SessionDetailProps) {
   const t = useTranslations("session");
+  const tCat = useTranslations("investCategories");
   const format = useFormatter();
   const [isPending, startTransition] = useTransition();
+
+  const investigations = session.sessionInvestigations ?? [];
 
   const handleToggle = (smId: string, active: boolean) => {
     startTransition(async () => {
       await toggleSessionMedication(smId, active);
+    });
+  };
+
+  const handleResulted = (id: string, resulted: boolean) => {
+    startTransition(async () => {
+      await setInvestigationResulted(id, resulted);
     });
   };
 
@@ -58,6 +78,16 @@ export function SessionDetail({
         </Button>
         {!readOnly && (
           <div className="flex gap-2">
+            {investigations.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => printInvestigations(session, patientName)}
+              >
+                <FlaskConical className="h-4 w-4 me-2" />
+                {t("printRequests")}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onPrint}>
               <Printer className="h-4 w-4 me-2" />
               {t("printRx")}
@@ -167,6 +197,73 @@ export function SessionDetail({
           )}
         </CardContent>
       </Card>
+
+      {/* Requested investigations — what the doctor asked the patient to get,
+          each markable resulted as the results come back */}
+      {investigations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FlaskConical className="h-4 w-4" />
+              <CardTitle className="text-base">
+                {t("requestedInvestigations")}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {investigations.map((inv) => {
+                const resulted = inv.status === "RESULTED";
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between p-3 rounded-lg border gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          {tCat(inv.investigation.category)}
+                        </Badge>
+                        <span className="font-medium text-sm">
+                          {inv.investigation.name}
+                        </span>
+                      </div>
+                      {inv.notes && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t("note")}: {inv.notes}
+                        </div>
+                      )}
+                      {resulted && inv.resultedAt && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t("resultedOn", {
+                            date: format.dateTime(new Date(inv.resultedAt), {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }),
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground">
+                        {resulted ? t("resulted") : t("pending")}
+                      </span>
+                      <Switch
+                        checked={resulted}
+                        onCheckedChange={(checked) =>
+                          handleResulted(inv.id, checked)
+                        }
+                        disabled={isPending || readOnly}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lab results — the patient's full history, this session's column marked */}
       <SessionLabResults sheets={labSheets} currentSessionId={session.id} />

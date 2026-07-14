@@ -61,6 +61,10 @@ interface CreateSessionInput {
     duration?: string;
     notes?: string;
   }[];
+  investigations?: {
+    investigationId: string;
+    notes?: string;
+  }[];
 }
 
 export async function createSession(
@@ -120,9 +124,18 @@ export async function createSession(
               }),
             }
           : undefined,
+        sessionInvestigations: data.investigations?.length
+          ? {
+              create: data.investigations.map((inv) => ({
+                investigationId: inv.investigationId,
+                notes: inv.notes,
+              })),
+            }
+          : undefined,
       },
       include: {
         sessionMedications: { include: { medication: true } },
+        sessionInvestigations: { include: { investigation: true } },
       },
     });
 

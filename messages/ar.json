@@ -384,7 +384,14 @@
       "fileTypeError": "يُسمح فقط بالصور (JPEG، PNG، WebP، GIF) وملفات PDF",
       "viewFile": "عرض الملف",
       "viewImage": "عرض الصورة",
-      "openOriginal": "فتح الأصل"
+      "openOriginal": "فتح الأصل",
+      "requested": "الفحوصات المطلوبة",
+      "pendingCount": "{count} قيد الانتظار",
+      "requestedOn": "طُلب في {date}",
+      "pending": "قيد الانتظار",
+      "resulted": "ظهرت النتيجة",
+      "statusFailed": "فشل تحديث الحالة",
+      "requestRemoved": "تم حذف الطلب"
     },
     "sessionsTab": {
       "title": "الجلسات",
@@ -502,7 +509,26 @@
     "printPromptTitle": "طباعة الروشتة؟",
     "printPromptBody": "تم حفظ الجلسة. هل تريد طباعة الروشتة للمريض الآن؟",
     "printNow": "طباعة الروشتة",
-    "printNotNow": "ليس الآن"
+    "printNotNow": "ليس الآن",
+    "requestedInvestigations": "الفحوصات المطلوبة",
+    "requestedCount": "{count} مطلوب",
+    "searchInvestPlaceholder": "ابحث عن فحص لطلبه أو اكتب لإضافة جديد...",
+    "createInvest": "+ إضافة \"{name}\"",
+    "createInvestFailed": "فشل إنشاء الفحص",
+    "category": "النوع",
+    "selectCategory": "اختر النوع",
+    "investNotesPlaceholder": "ملاحظة (مثال: صائم)",
+    "noInvestRequested": "لا توجد فحوصات مطلوبة",
+    "pending": "قيد الانتظار",
+    "resulted": "ظهرت النتيجة",
+    "resultedOn": "ظهرت النتيجة في {date}",
+    "printRequests": "طباعة الطلبات"
+  },
+  "investCategories": {
+    "LAB": "تحاليل",
+    "IMAGING": "أشعة",
+    "PROCEDURE": "إجراء",
+    "OTHER": "أخرى"
   },
   "patientHistory": {
     "viewHistory": "عرض السجل",

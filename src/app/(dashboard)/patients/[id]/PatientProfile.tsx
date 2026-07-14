@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 import { LabSheet } from "@/components/patients/lab/types";
 import type { PatientMedicationRow } from "@/actions/patients";
+import type { PatientInvestigationRow } from "@/actions/investigations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ type PatientWithRelations = Patient & {
   sessionsHasMore: boolean;
   // Full medication history, for the medications tab and the sessions sidebar.
   medications: PatientMedicationRow[];
+  // Every investigation the doctor requested, for the investigations tab.
+  investigationRequests: PatientInvestigationRow[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
 
@@ -214,6 +217,7 @@ export function PatientProfile({
           <InvestigationsTab
             patientId={patient.id}
             investigations={patient.investigations}
+            requests={patient.investigationRequests}
           />
         </TabsContent>
 

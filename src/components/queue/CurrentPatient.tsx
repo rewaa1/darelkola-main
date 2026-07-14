@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { differenceInYears } from "date-fns";
 import { getPatient, type PatientMedicationRow } from "@/actions/patients";
+import type { PatientInvestigationRow } from "@/actions/investigations";
 import { getPreAssessmentForAppointment } from "@/actions/pre-assessments";
 
 import { PersonalInfoTab } from "@/components/patients/PersonalInfoTab";
@@ -58,6 +59,8 @@ type PatientWithRelations = Patient & {
   sessionsHasMore: boolean;
   // Full medication history, for the medications tab and sessions sidebar.
   medications: PatientMedicationRow[];
+  // Every investigation the doctor requested, for the investigations tab.
+  investigationRequests: PatientInvestigationRow[];
   appointments: (Appointment & { clinic: Clinic })[];
 };
 
@@ -286,6 +289,7 @@ export function CurrentPatient({
             <InvestigationsTab
               patientId={current.id}
               investigations={current.investigations}
+              requests={current.investigationRequests}
             />
           </TabsContent>
 

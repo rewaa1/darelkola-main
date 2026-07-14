@@ -139,6 +139,7 @@ export function SessionsTab({
     return (
       <SessionDetail
         session={selectedSession}
+        patientName={patientName}
         labSheets={labSheets}
         readOnly={readOnly}
         onBack={() => {

@@ -191,9 +191,9 @@ model Medication {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  patientId String   @map("patient_id")
-  date      DateTime @db.Date
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  date        DateTime @db.Date
   examination String?
 
   // Vitals
@@ -204,10 +204,11 @@ model Session {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  patient              Patient              @relation(fields: [patientId], references: [id])
-  sessionMedications   SessionMedication[]
-  investigationSheets  InvestigationSheet[]
-  preAssessment        PreAssessment?
+  patient               Patient                @relation(fields: [patientId], references: [id])
+  sessionMedications    SessionMedication[]
+  sessionInvestigations SessionInvestigation[]
+  investigationSheets   InvestigationSheet[]
+  preAssessment         PreAssessment?
 
   @@index([patientId])
   @@map("sessions")
@@ -236,6 +237,54 @@ model SessionMedication {
 
   @@unique([sessionId, medicationId])
   @@map("session_medications")
+}
+
+// The catalog of tests a doctor can request — labs, imaging, procedures. Grows
+// as staff add new ones, exactly like the Medication catalog. Distinct from
+// InvestigationSheet/Investigation, which hold *results*; this holds the names
+// of things that can be *asked for*.
+model InvestigationCatalog {
+  id        String                @id @default(cuid())
+  name      String                @unique
+  category  InvestigationCategory @default(LAB)
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  sessionInvestigations SessionInvestigation[]
+
+  @@map("investigation_catalog")
+}
+
+enum InvestigationCategory {
+  LAB
+  IMAGING
+  PROCEDURE
+  OTHER
+}
+
+// A test the doctor requested during a session. Mirrors SessionMedication: it
+// references the catalog and carries per-request detail. Starts REQUESTED
+// (pending) and is flipped to RESULTED once the result comes back, so
+// outstanding tests stay visible.
+model SessionInvestigation {
+  id              String                     @id @default(cuid())
+  sessionId       String                     @map("session_id")
+  investigationId String                     @map("investigation_id")
+  status          SessionInvestigationStatus @default(REQUESTED)
+  notes           String?
+  requestedAt     DateTime                   @default(now()) @map("requested_at")
+  resultedAt      DateTime?                  @map("resulted_at") @db.Date
+
+  session       Session              @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  investigation InvestigationCatalog @relation(fields: [investigationId], references: [id])
+
+  @@unique([sessionId, investigationId])
+  @@index([sessionId])
+  @@map("session_investigations")
+}
+
+enum SessionInvestigationStatus {
+  REQUESTED
+  RESULTED
 }
 
 // The assistant doctor's pre-consultation note: vitals and his own examination,
@@ -393,21 +442,21 @@ model ExtraInvestigation {
 // ===========================================
 
 model Appointment {
-  id           String            @id @default(cuid())
-  patientName  String            @map("patient_name")
-  patientPhone String            @map("patient_phone")
-  patientId    String?           @map("patient_id")
-  clinicId     String            @map("clinic_id")
-  date         DateTime          @db.Date
-  status       AppointmentStatus @default(SCHEDULED)
-  type         AppointmentType   @default(REGULAR_EXAMINATION)
+  id            String            @id @default(cuid())
+  patientName   String            @map("patient_name")
+  patientPhone  String            @map("patient_phone")
+  patientId     String?           @map("patient_id")
+  clinicId      String            @map("clinic_id")
+  date          DateTime          @db.Date
+  status        AppointmentStatus @default(SCHEDULED)
+  type          AppointmentType   @default(REGULAR_EXAMINATION)
   queueNumber   Int?              @map("queue_number")
   checkedInAt   DateTime?         @map("checked_in_at")
   bookedById    String?           @map("booked_by_id")
   checkedInById String?           @map("checked_in_by_id")
-  notes        String?
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
+  notes         String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
 
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   patient     Patient?      @relation(fields: [patientId], references: [id])

@@ -259,6 +259,7 @@ export function AssistantCurrentPatient({
             <InvestigationsTab
               patientId={patientId}
               investigations={current.investigations}
+              requests={current.investigationRequests}
             />
           </TabsContent>
 

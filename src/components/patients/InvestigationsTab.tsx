@@ -24,6 +24,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -41,11 +43,17 @@ import {
   X,
   CalendarIcon,
   CheckCircle2,
+  FlaskConical,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
 import { addInvestigation, deleteInvestigation } from "@/actions/patients";
+import {
+  setInvestigationResulted,
+  removeSessionInvestigation,
+  type PatientInvestigationRow,
+} from "@/actions/investigations";
 import { UploadButton } from "@/lib/uploadthing";
 import { investigationSchema, getFieldErrors } from "@/lib/validation";
 
@@ -86,15 +94,42 @@ function isImageFile(fileName?: string | null, fileUrl?: string | null) {
 interface InvestigationsTabProps {
   patientId: string;
   investigations: Investigation[];
+  // Tests the doctor requested across all this patient's sessions, newest first.
+  requests: PatientInvestigationRow[];
 }
 
 export function InvestigationsTab({
   patientId,
   investigations,
+  requests,
 }: InvestigationsTabProps) {
   const t = useTranslations("patientTabs.investTab");
   const tCommon = useTranslations("common");
+  const tCat = useTranslations("investCategories");
   const formatter = useFormatter();
+
+  const pendingCount = requests.filter((r) => r.status === "REQUESTED").length;
+
+  const handleResulted = (id: string, resulted: boolean) => {
+    startTransition(async () => {
+      try {
+        await setInvestigationResulted(id, resulted);
+      } catch {
+        toast.error(t("statusFailed"));
+      }
+    });
+  };
+
+  const handleRemoveRequest = (id: string) => {
+    startTransition(async () => {
+      try {
+        await removeSessionInvestigation(id);
+        toast.success(t("requestRemoved"));
+      } catch {
+        toast.error(t("removeFailed"));
+      }
+    });
+  };
   const fileSchema = useMemo(
     () =>
       buildFileSchema({
@@ -170,6 +205,79 @@ export function InvestigationsTab({
 
   return (
     <>
+      {/* Requested investigations — what the doctor asked for, pending until a
+          result is recorded. Aggregated across every session for this patient. */}
+      {requests.length > 0 && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FlaskConical className="h-4 w-4" />
+              {t("requested")}
+              {pendingCount > 0 && (
+                <Badge className="bg-amber-600">
+                  {t("pendingCount", { count: pendingCount })}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {requests.map((r) => {
+                const resulted = r.status === "RESULTED";
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border p-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          {tCat(r.investigation.category)}
+                        </Badge>
+                        <span className="text-sm font-medium">
+                          {r.investigation.name}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {t("requestedOn", {
+                          date: formatter.dateTime(new Date(r.session.date), {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }),
+                        })}
+                        {r.notes ? ` • ${r.notes}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {resulted ? t("resulted") : t("pending")}
+                      </span>
+                      <Switch
+                        checked={resulted}
+                        onCheckedChange={(checked) =>
+                          handleResulted(r.id, checked)
+                        }
+                        disabled={isPending}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleRemoveRequest(r.id)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("title")}</CardTitle>

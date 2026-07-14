@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Medication } from "@prisma/client";
+import {
+  Medication,
+  InvestigationCatalog,
+  type InvestigationCategory,
+} from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -20,6 +24,10 @@ import { clinicDayLocal } from "@/lib/clinic-day";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
 import {
+  searchInvestigationCatalog,
+  createInvestigationCatalog,
+} from "@/actions/investigations";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -29,10 +37,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MedEntry } from "./types";
+import { MedEntry, InvestigationEntry } from "./types";
 import type { PatientMedicationRow } from "@/actions/patients";
 import { SessionDetailsCard } from "./SessionDetailsCard";
 import { MedicationsCard } from "./MedicationsCard";
+import { InvestigationRequestsCard } from "./InvestigationRequestsCard";
 import { PreAssessmentView, PreAssessmentLike } from "./PreAssessmentView";
 import { printPrescription, hasActiveMeds } from "./print-rx";
 import { SessionLabResults } from "../lab/SessionLabResults";
@@ -206,6 +215,62 @@ export function AddSessionForm({
     setSelectedMeds(updated);
   };
 
+  // Investigations requested at this visit — starts empty; unlike meds, tests
+  // are not carried forward from past sessions.
+  const [selectedInvestigations, setSelectedInvestigations] = useState<
+    InvestigationEntry[]
+  >([]);
+  const [investSearch, setInvestSearch] = useState("");
+  const [investResults, setInvestResults] = useState<InvestigationCatalog[]>([]);
+
+  // ---- Investigation handlers ----
+
+  const searchInvest = async (query: string) => {
+    setInvestSearch(query);
+    if (query.length < 2) {
+      setInvestResults([]);
+      return;
+    }
+    const results = await searchInvestigationCatalog(query);
+    setInvestResults(
+      results.filter(
+        (r) => !selectedInvestigations.some((s) => s.investigation.id === r.id),
+      ),
+    );
+  };
+
+  const addInvest = (item: InvestigationCatalog) => {
+    setSelectedInvestigations([
+      ...selectedInvestigations,
+      { investigation: item, notes: "" },
+    ]);
+    setInvestSearch("");
+    setInvestResults([]);
+  };
+
+  const addNewInvest = async (name: string, category: string) => {
+    if (!name) return;
+    try {
+      const item = await createInvestigationCatalog({
+        name,
+        category: category as InvestigationCategory,
+      });
+      addInvest(item);
+    } catch {
+      toast.error(t("createInvestFailed"));
+    }
+  };
+
+  const removeInvest = (index: number) => {
+    setSelectedInvestigations(selectedInvestigations.filter((_, i) => i !== index));
+  };
+
+  const updateInvestNotes = (index: number, notes: string) => {
+    const updated = [...selectedInvestigations];
+    updated[index] = { ...updated[index], notes };
+    setSelectedInvestigations(updated);
+  };
+
   // ---- Submit ----
 
   const handleSubmit = () => {
@@ -245,6 +310,10 @@ export function AddSessionForm({
             frequency: sm.frequency || undefined,
             duration: sm.duration || undefined,
             notes: sm.notes || undefined,
+          })),
+          investigations: selectedInvestigations.map((s) => ({
+            investigationId: s.investigation.id,
+            notes: s.notes || undefined,
           })),
         });
 
@@ -333,6 +402,18 @@ export function AddSessionForm({
         onAddNewMed={addNewMed}
         onRemoveMed={removeMed}
         onUpdateMed={updateMed}
+      />
+
+      {/* Investigations the doctor is asking the patient to go get done */}
+      <InvestigationRequestsCard
+        selected={selectedInvestigations}
+        search={investSearch}
+        results={investResults}
+        onSearch={searchInvest}
+        onAdd={addInvest}
+        onAddNew={addNewInvest}
+        onRemove={removeInvest}
+        onUpdateNotes={updateInvestNotes}
       />
 
       {/* Lab results reception entered ahead of this visit, read-only */}

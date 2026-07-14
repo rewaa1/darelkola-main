@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getPatientInvestigationRequests } from "@/actions/investigations";
 import { revalidatePath } from "next/cache";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
 import {
@@ -169,6 +170,7 @@ const SESSIONS_PAGE_SIZE = 5;
 // sync with SessionWithRelations in components/patients/sessions/types.ts.
 const sessionPageInclude = {
   sessionMedications: { include: { medication: true } },
+  sessionInvestigations: { include: { investigation: true } },
   investigationSheets: {
     include: { extraInvestigations: true },
     orderBy: { date: "desc" },
@@ -236,38 +238,41 @@ export async function getPatientMedications(
 }
 
 export async function getPatient(patientId: string) {
-  const [patient, sessionPage, medications] = await Promise.all([
-    prisma.patient.findUnique({
-      where: { id: patientId },
-      include: {
-        personalHistory: true,
-        registeredBy: { select: { name: true } },
-        previousMedications: true,
-        investigations: {
-          orderBy: { date: "desc" },
-        },
-        // Every sheet the patient has, linked or not — the Lab Results tab needs
-        // the full history so the doctor can compare across visits.
-        investigationSheets: {
-          include: {
-            extraInvestigations: true,
-            session: { select: { id: true, date: true } },
+  const [patient, sessionPage, medications, investigationRequests] =
+    await Promise.all([
+      prisma.patient.findUnique({
+        where: { id: patientId },
+        include: {
+          personalHistory: true,
+          registeredBy: { select: { name: true } },
+          previousMedications: true,
+          investigations: {
+            orderBy: { date: "desc" },
           },
-          orderBy: { date: "desc" },
-        },
-        appointments: {
-          orderBy: { date: "desc" },
-          include: {
-            clinic: true,
+          // Every sheet the patient has, linked or not — the Lab Results tab
+          // needs the full history so the doctor can compare across visits.
+          investigationSheets: {
+            include: {
+              extraInvestigations: true,
+              session: { select: { id: true, date: true } },
+            },
+            orderBy: { date: "desc" },
+          },
+          appointments: {
+            orderBy: { date: "desc" },
+            include: {
+              clinic: true,
+            },
           },
         },
-      },
-    }),
-    // Only the first page of the timeline, plus the full medication history —
-    // the two consumers that used to force loading every session eagerly.
-    getPatientSessionsPage(patientId),
-    getPatientMedications(patientId),
-  ]);
+      }),
+      // Only the first page of the timeline, plus the full medication and
+      // investigation-request history — the consumers that used to force
+      // loading every session eagerly.
+      getPatientSessionsPage(patientId),
+      getPatientMedications(patientId),
+      getPatientInvestigationRequests(patientId),
+    ]);
 
   if (!patient) return null;
 
@@ -276,6 +281,7 @@ export async function getPatient(patientId: string) {
     sessions: sessionPage.items,
     sessionsHasMore: sessionPage.hasMore,
     medications,
+    investigationRequests,
   };
 }
 
