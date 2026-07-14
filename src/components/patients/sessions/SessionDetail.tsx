@@ -71,13 +71,13 @@ export function SessionDetail({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 me-1 rtl:rotate-180" />
           {t("backToSessions")}
         </Button>
         {!readOnly && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             {investigations.length > 0 && (
               <Button
                 variant="outline"

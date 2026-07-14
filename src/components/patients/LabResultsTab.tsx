@@ -104,7 +104,7 @@ export function LabResultsTab({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FlaskConical className="h-4 w-4" />
             <CardTitle>
@@ -116,7 +116,7 @@ export function LabResultsTab({
               )}
             </CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {sheets.length > 1 && (
               <div className="flex rounded-md border p-0.5">
                 <Button

@@ -164,7 +164,7 @@ export function SessionsTab({
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>{t("title")}</CardTitle>
             {!readOnly && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 {lastSession && (
                   <Button
                     variant="outline"

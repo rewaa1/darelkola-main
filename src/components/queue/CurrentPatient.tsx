@@ -223,24 +223,28 @@ export function CurrentPatient({
       {/* Kept mounted while reloading so the open tab is not reset */}
       {current && (
         <Tabs defaultValue="personal" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
-            <TabsTrigger value="personal">{tTabs("personal")}</TabsTrigger>
-            <TabsTrigger value="history">{tTabs("history")}</TabsTrigger>
-            <TabsTrigger value="examination">
-              {tTabs("examination")}
-            </TabsTrigger>
-            <TabsTrigger value="sessions">{tTabs("sessions")}</TabsTrigger>
-            <TabsTrigger value="medications">
-              {tTabs("medications")}
-            </TabsTrigger>
-            <TabsTrigger value="labResults">{tTabs("labResults")}</TabsTrigger>
-            <TabsTrigger value="investigations">
-              {tTabs("investigations")}
-            </TabsTrigger>
-            <TabsTrigger value="appointments">
-              {tTabs("appointments")}
-            </TabsTrigger>
-          </TabsList>
+          {/* On mobile the 8 labels can't fit a fixed grid — swipeable strip
+              instead, same pattern as the assistant view. */}
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-8">
+              <TabsTrigger value="personal">{tTabs("personal")}</TabsTrigger>
+              <TabsTrigger value="history">{tTabs("history")}</TabsTrigger>
+              <TabsTrigger value="examination">
+                {tTabs("examination")}
+              </TabsTrigger>
+              <TabsTrigger value="sessions">{tTabs("sessions")}</TabsTrigger>
+              <TabsTrigger value="medications">
+                {tTabs("medications")}
+              </TabsTrigger>
+              <TabsTrigger value="labResults">{tTabs("labResults")}</TabsTrigger>
+              <TabsTrigger value="investigations">
+                {tTabs("investigations")}
+              </TabsTrigger>
+              <TabsTrigger value="appointments">
+                {tTabs("appointments")}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="personal">
             <PersonalInfoTab history={history ?? null} patientId={current.id} />
