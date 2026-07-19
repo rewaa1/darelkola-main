@@ -50,6 +50,7 @@ export function AssistantCurrentPatient({
 }: Props) {
   const t = useTranslations("assistant");
   const tTabs = useTranslations("tabs");
+  const tQueue = useTranslations("queue");
   const { failed, showError } = useActionErrors();
   const [patient, setPatient] = useState<PatientData>(null);
   const [preAssessment, setPreAssessment] = useState<PreAssessmentData>(null);
@@ -136,6 +137,16 @@ export function AssistantCurrentPatient({
               <span className="font-semibold text-base truncate">
                 {history?.fullName ?? appointment.patientName}
               </span>
+              {/* First visit ever — no sessions on file. Same flag the doctor
+                  sees, derived from the loaded patient. */}
+              {current && current.sessions.length === 0 && (
+                <Badge
+                  variant="outline"
+                  className="shrink-0 border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-400"
+                >
+                  {tQueue("newPatient")}
+                </Badge>
+              )}
               {history?.sex && (
                 <Badge variant="outline" className="capitalize shrink-0">
                   {history.sex}

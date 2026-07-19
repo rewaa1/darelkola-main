@@ -31,6 +31,8 @@ export type QueueCardAppointment = Appointment & {
   bookedBy?: { name: string } | null;
   checkedInBy?: { name: string } | null;
   preAssessment?: { id: string } | null;
+  // First visit ever (no sessions on file), computed by getTodayQueue.
+  isNewPatient?: boolean;
 };
 
 interface QueueCardProps {
@@ -163,6 +165,17 @@ export function QueueCard({
                       className="text-[10px] px-1.5 py-0 text-orange-600 border-orange-300 shrink-0"
                     >
                       {t("new")}
+                    </Badge>
+                  )}
+                {/* First visit ever — scoped to the waiting list; scheduled
+                    rows already carry the "new booking" badge above. */}
+                {appointment.isNewPatient &&
+                  appointment.status === "CHECKED_IN" && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 shrink-0 border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-400"
+                    >
+                      {t("newPatient")}
                     </Badge>
                   )}
                 {appointment.preAssessment && (

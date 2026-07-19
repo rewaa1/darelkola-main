@@ -10,7 +10,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, RefreshCw, Building2, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  RefreshCw,
+  Building2,
+  UserRound,
+  Printer,
+  FlaskConical,
+} from "lucide-react";
 import { QueueList, CurrentPatient, QueueStats } from "@/components/queue";
 import { BookingDialog, ScheduledList } from "@/components/appointments";
 import { useActionErrors } from "@/lib/use-action-errors";
@@ -22,6 +29,12 @@ import {
   reorderQueue,
   getTodayQueue,
 } from "@/actions/appointments";
+import { getPrintableSession } from "@/actions/sessions";
+import {
+  printPrescription,
+  hasActiveMeds,
+} from "@/components/patients/sessions/print-rx";
+import { printInvestigations } from "@/components/patients/sessions/print-investigations";
 
 // The server action is the single source of truth for the queue's shape, so
 // deriving the type from it keeps the client honest as the shape grows
@@ -41,6 +54,7 @@ export function QueuePageClient({
 }: QueuePageClientProps) {
   const t = useTranslations("queue");
   const tToast = useTranslations("appointmentsToast");
+  const tSession = useTranslations("session");
   const { failed, showError } = useActionErrors();
   const [selectedClinicId, setSelectedClinicId] = useState(initialClinicId);
   const [data, setData] = useState(initialData);
@@ -156,6 +170,32 @@ export function QueuePageClient({
     });
   };
 
+  // Reprints from the completed tab. The row only holds counts; the full
+  // session is fetched on click, then handed to the same print routines the
+  // session detail uses.
+  const handlePrintRx = async (sessionId: string, patientName: string) => {
+    try {
+      const session = await getPrintableSession(sessionId);
+      if (session && hasActiveMeds(session)) {
+        printPrescription(session, patientName);
+      }
+    } catch {
+      showError();
+    }
+  };
+
+  const handlePrintInvestigations = async (
+    sessionId: string,
+    patientName: string,
+  ) => {
+    try {
+      const session = await getPrintableSession(sessionId);
+      if (session) printInvestigations(session, patientName);
+    } catch {
+      showError();
+    }
+  };
+
   const handleReorder = async (
     appointmentId: string,
     newQueueNumber: number,
@@ -234,6 +274,14 @@ export function QueuePageClient({
             <span className="text-sm font-medium truncate">
               {data.withAssistant.patientName}
             </span>
+            {data.withAssistant.isNewPatient && (
+              <Badge
+                variant="outline"
+                className="shrink-0 text-xs border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-400"
+              >
+                {t("newPatient")}
+              </Badge>
+            )}
             <Badge
               variant="outline"
               className="ms-auto text-xs border-indigo-300 text-indigo-700"
@@ -315,36 +363,65 @@ export function QueuePageClient({
             </Card>
           ) : (
             <div className="space-y-2">
-              {data.completed.map((apt) => (
-                <Card key={apt.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      {apt.queueNumber && (
+              {data.completed.map((apt) => {
+                const printable = apt.printable;
+                return (
+                  <Card key={apt.id}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        {apt.queueNumber && (
+                          <span className="text-muted-foreground">
+                            #{apt.queueNumber}
+                          </span>
+                        )}
+                        <span className="font-medium">{apt.patientName}</span>
                         <span className="text-muted-foreground">
-                          #{apt.queueNumber}
+                          {apt.patientPhone}
                         </span>
-                      )}
-                      <span className="font-medium">{apt.patientName}</span>
-                      <span className="text-muted-foreground">
-                        {apt.patientPhone}
-                      </span>
-                      {apt.patientId && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          asChild
-                          className="ms-auto shrink-0"
-                        >
-                          <Link href={`/patients/${apt.patientId}`}>
-                            <UserRound className="h-4 w-4 me-1.5" />
-                            {t("viewProfile")}
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <div className="ms-auto flex flex-wrap gap-2">
+                          {printable &&
+                            printable._count.sessionMedications > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handlePrintRx(printable.id, apt.patientName)
+                                }
+                              >
+                                <Printer className="h-4 w-4 me-1.5" />
+                                {tSession("printRx")}
+                              </Button>
+                            )}
+                          {printable &&
+                            printable._count.sessionInvestigations > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handlePrintInvestigations(
+                                    printable.id,
+                                    apt.patientName,
+                                  )
+                                }
+                              >
+                                <FlaskConical className="h-4 w-4 me-1.5" />
+                                {tSession("printRequests")}
+                              </Button>
+                            )}
+                          {apt.patientId && (
+                            <Button size="sm" variant="outline" asChild>
+                              <Link href={`/patients/${apt.patientId}`}>
+                                <UserRound className="h-4 w-4 me-1.5" />
+                                {t("viewProfile")}
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

@@ -9,11 +9,9 @@ import { revalidatePath } from "next/cache";
 // Catalog (the searchable list of orderable tests)
 // ==============================
 
-export async function searchInvestigationCatalog(query: string) {
+export async function getInvestigationCatalog() {
   return prisma.investigationCatalog.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
     orderBy: { name: "asc" },
-    take: 20,
   });
 }
 

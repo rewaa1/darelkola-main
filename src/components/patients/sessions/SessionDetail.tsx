@@ -135,7 +135,10 @@ export function SessionDetail({
                 <h4 className="text-sm font-medium mb-1">
                   {t("examination")}
                 </h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                {/* overflow-wrap:anywhere (not break-words): it also shrinks
+                    the min-content width, so an unbroken string can't stretch
+                    the layout — it just wraps. */}
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
                   {session.examination}
                 </p>
               </div>

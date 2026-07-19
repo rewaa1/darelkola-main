@@ -60,7 +60,7 @@ export function PreAssessmentView({ pre }: { pre: PreAssessmentLike }) {
             {hasVitals && <Separator className="my-4" />}
             <div>
               <h4 className="text-sm font-medium mb-1">{t("examination")}</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
                 {pre.examination}
               </p>
             </div>

@@ -39,6 +39,21 @@ export async function getSession(sessionId: string) {
   });
 }
 
+/**
+ * Just what the print routines need (Rx + investigation-request slip), fetched
+ * on click from the queue's completed tab, where only session counts are kept
+ * in memory.
+ */
+export async function getPrintableSession(sessionId: string) {
+  return prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      sessionMedications: { include: { medication: true } },
+      sessionInvestigations: { include: { investigation: true } },
+    },
+  });
+}
+
 interface CreateSessionInput {
   date: string;
   clinicId: string;

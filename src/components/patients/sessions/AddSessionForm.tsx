@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import {
   Medication,
@@ -24,7 +24,7 @@ import { clinicDayLocal } from "@/lib/clinic-day";
 import { createSessionSchema, getFieldErrors } from "@/lib/validation";
 import { searchMedications, createMedication } from "@/actions/medications";
 import {
-  searchInvestigationCatalog,
+  getInvestigationCatalog,
   createInvestigationCatalog,
 } from "@/actions/investigations";
 import {
@@ -220,44 +220,65 @@ export function AddSessionForm({
   const [selectedInvestigations, setSelectedInvestigations] = useState<
     InvestigationEntry[]
   >([]);
-  const [investSearch, setInvestSearch] = useState("");
-  const [investResults, setInvestResults] = useState<InvestigationCatalog[]>([]);
+  const [investCatalog, setInvestCatalog] = useState<InvestigationCatalog[]>([]);
+  const [investCatalogStatus, setInvestCatalogStatus] = useState<
+    "loading" | "error" | "ready"
+  >("loading");
+
+  // Status starts (and on retry returns to) "loading" before the fetch; state
+  // is only set from promise callbacks so the mount effect stays clean.
+  const loadInvestCatalog = useCallback(() => {
+    getInvestigationCatalog()
+      .then((items) => {
+        setInvestCatalog(items);
+        setInvestCatalogStatus("ready");
+      })
+      .catch(() => setInvestCatalogStatus("error"));
+  }, []);
+
+  const retryInvestCatalog = () => {
+    setInvestCatalogStatus("loading");
+    loadInvestCatalog();
+  };
+
+  useEffect(() => {
+    loadInvestCatalog();
+  }, [loadInvestCatalog]);
 
   // ---- Investigation handlers ----
 
-  const searchInvest = async (query: string) => {
-    setInvestSearch(query);
-    if (query.length < 2) {
-      setInvestResults([]);
-      return;
-    }
-    const results = await searchInvestigationCatalog(query);
-    setInvestResults(
-      results.filter(
-        (r) => !selectedInvestigations.some((s) => s.investigation.id === r.id),
-      ),
-    );
-  };
-
-  const addInvest = (item: InvestigationCatalog) => {
-    setSelectedInvestigations([
-      ...selectedInvestigations,
-      { investigation: item, notes: "" },
-    ]);
-    setInvestSearch("");
-    setInvestResults([]);
+  const toggleInvest = (item: InvestigationCatalog) => {
+    setSelectedInvestigations((prev) => {
+      const index = prev.findIndex((s) => s.investigation.id === item.id);
+      if (index >= 0) return prev.filter((_, i) => i !== index);
+      return [...prev, { investigation: item, notes: "" }];
+    });
   };
 
   const addNewInvest = async (name: string, category: string) => {
-    if (!name) return;
+    if (!name) return false;
+    // If it's already in the catalog under this name, select it instead of
+    // failing on the unique constraint.
+    const existing = investCatalog.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      if (!selectedInvestigations.some((s) => s.investigation.id === existing.id)) {
+        toggleInvest(existing);
+      }
+      return true;
+    }
     try {
       const item = await createInvestigationCatalog({
         name,
         category: category as InvestigationCategory,
       });
-      addInvest(item);
+      setInvestCatalog((prev) => [...prev, item]);
+      toggleInvest(item);
+      return true;
     } catch {
       toast.error(t("createInvestFailed"));
+      return false;
     }
   };
 
@@ -407,10 +428,10 @@ export function AddSessionForm({
       {/* Investigations the doctor is asking the patient to go get done */}
       <InvestigationRequestsCard
         selected={selectedInvestigations}
-        search={investSearch}
-        results={investResults}
-        onSearch={searchInvest}
-        onAdd={addInvest}
+        catalog={investCatalog}
+        catalogStatus={investCatalogStatus}
+        onRetryLoad={retryInvestCatalog}
+        onToggle={toggleInvest}
         onAddNew={addNewInvest}
         onRemove={removeInvest}
         onUpdateNotes={updateInvestNotes}

@@ -164,6 +164,16 @@ export function CurrentPatient({
                     {current?.personalHistory?.fullName ??
                       appointment.patientName}
                   </span>
+                  {/* First visit ever — no sessions on file. Tells the doctor
+                      to take a full history before examining. */}
+                  {current && current.sessions.length === 0 && (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-400"
+                    >
+                      {t("newPatient")}
+                    </Badge>
+                  )}
                   {history?.sex && (
                     <Badge variant="outline" className="capitalize">
                       {history.sex}

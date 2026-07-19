@@ -292,16 +292,77 @@ export async function getTodayQueue(clinicId: string) {
     ],
   });
 
+  // First visit ever — the patient has no sessions on file (a booking with no
+  // patient record at all is new by definition). Reception and the assistant
+  // read this flag; the doctor's view derives it from the loaded patient.
+  const queuePatientIds = [
+    ...new Set(
+      appointments
+        .map((a) => a.patientId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const seenBefore = queuePatientIds.length
+    ? await prisma.session.groupBy({
+        by: ["patientId"],
+        where: { patientId: { in: queuePatientIds } },
+      })
+    : [];
+  const seenSet = new Set(seenBefore.map((s) => s.patientId));
+  const flagged = appointments.map((a) => ({
+    ...a,
+    isNewPatient: a.patientId === null || !seenSet.has(a.patientId),
+  }));
+
   // Group by status. WITH_ASSISTANT and WITH_DOCTOR are two independent
   // single-occupancy rooms, so each surfaces at most one patient.
-  const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
-  const waiting = appointments.filter((a) => a.status === "CHECKED_IN");
-  const withAssistant = appointments.find((a) => a.status === "WITH_ASSISTANT");
-  const withDoctor = appointments.find((a) => a.status === "WITH_DOCTOR");
-  const completed = appointments.filter((a) => a.status === "COMPLETED");
+  const scheduled = flagged.filter((a) => a.status === "SCHEDULED");
+  const waiting = flagged.filter((a) => a.status === "CHECKED_IN");
+  const withAssistant = flagged.find((a) => a.status === "WITH_ASSISTANT");
+  const withDoctor = flagged.find((a) => a.status === "WITH_DOCTOR");
+  const completedRaw = flagged.filter((a) => a.status === "COMPLETED");
+
+  // What each completed visit's session left behind — just counts, so the
+  // completed tab can offer reprints without shipping full session payloads on
+  // every refresh. Sessions carry no appointment FK; today's session for the
+  // patient is the visit's session (newest first if the doctor somehow made
+  // two).
+  const completedPatientIds = [
+    ...new Set(
+      completedRaw
+        .map((a) => a.patientId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const todaySessions = completedPatientIds.length
+    ? await prisma.session.findMany({
+        where: { patientId: { in: completedPatientIds }, date: today },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          patientId: true,
+          _count: {
+            select: {
+              sessionMedications: { where: { active: true } },
+              sessionInvestigations: true,
+            },
+          },
+        },
+      })
+    : [];
+  const sessionByPatient = new Map<string, (typeof todaySessions)[number]>();
+  for (const s of todaySessions) {
+    if (!sessionByPatient.has(s.patientId)) sessionByPatient.set(s.patientId, s);
+  }
+  const completed = completedRaw.map((apt) => ({
+    ...apt,
+    printable: apt.patientId
+      ? (sessionByPatient.get(apt.patientId) ?? null)
+      : null,
+  }));
 
   return {
-    appointments,
+    appointments: flagged,
     scheduled,
     waiting,
     withAssistant,
