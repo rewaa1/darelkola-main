@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { AppointmentStatus, AppointmentType } from "@prisma/client";
+import { getCachedClinics } from "@/lib/clinics";
 import { paginationToSkipTake, buildPaginatedResult } from "@/lib/pagination";
 import { clinicDay, clinicDayString, toDateOnly } from "@/lib/clinic-day";
 import { requireRole } from "@/lib/auth";
@@ -42,9 +43,9 @@ export type BookAppointmentInput = {
 // ===========================================
 
 export async function getClinics() {
-  return await prisma.clinic.findMany({
-    orderBy: { name: "asc" },
-  });
+  // Reads through the cross-request cache; invalidated by the clinic write
+  // actions in actions/settings.ts. See src/lib/clinics.ts.
+  return getCachedClinics();
 }
 
 // ===========================================

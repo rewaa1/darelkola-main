@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdminFetch } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { UserRole } from "@prisma/client";
+import { CLINICS_CACHE_TAG } from "@/lib/clinics";
 import {
   type ActionResult,
   actionError,
@@ -146,6 +147,9 @@ export async function updateClinic(
     where: { id: clinicId },
     data,
   });
+  // Purge the cross-request clinics cache (src/lib/clinics.ts). updateTag is the
+  // Server-Action-side invalidation: immediate expiry, read-your-own-writes.
+  updateTag(CLINICS_CACHE_TAG);
   revalidatePath("/settings");
 }
 
@@ -155,6 +159,7 @@ export async function updateClinic(
 
 export async function createClinic(data: { name: string; phone?: string }) {
   await prisma.clinic.create({ data });
+  updateTag(CLINICS_CACHE_TAG);
   revalidatePath("/settings");
 }
 
@@ -184,6 +189,7 @@ export async function deleteClinic(clinicId: string): Promise<ActionResult> {
       // Most likely a foreign-key violation: the clinic still has appointments.
       actionError("clinicDeleteFailed");
     }
+    updateTag(CLINICS_CACHE_TAG);
     revalidatePath("/settings");
   });
 }
