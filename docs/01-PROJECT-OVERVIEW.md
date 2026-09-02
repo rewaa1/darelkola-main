@@ -6,7 +6,7 @@ A bilingual (Arabic/English) CRM system for managing a multi-branch medical clin
 
 ---
 
-## Core Features
+## Core Feature
 
 | Feature                   | Description                                                                                           |
 | ------------------------- | ----------------------------------------------------------------------------------------------------- |

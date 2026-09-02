@@ -14,7 +14,8 @@ const INSTANT = { duration: 0 } as const;
 
 /*
  * Year of first publication, not the current year. Copyright in this system is
- * retained by Orbix, who built it; Dar El Kola Clinic is licensed to use it.
+ * retained by Voidix.tech, who built it; Dar El Kola Clinic is licensed to use
+ * it.
  * Deliberately fixed — do not replace with `new Date().getFullYear()`, which
  * would silently overwrite the date protection actually began.
  *

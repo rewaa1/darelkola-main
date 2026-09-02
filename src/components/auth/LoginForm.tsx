@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { createClient } from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +11,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -27,20 +27,24 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await authClient.signIn.email({ email, password });
 
     if (error) {
-      setError(error.message);
+      // Better Auth's messages are English-only; this UI is also Arabic, so
+      // the code is translated rather than the message shown raw. Every
+      // credential failure reads the same on purpose — distinguishing "no such
+      // email" from "wrong password" tells an attacker which staff emails exist.
+      setError(
+        error.code === "INVALID_EMAIL_OR_PASSWORD"
+          ? t("invalidCredentials")
+          : t("failed"),
+      );
       setLoading(false);
       return;
     }
@@ -69,6 +73,7 @@ export function LoginForm() {
             <Input
               id="email"
               type="email"
+              autoComplete="username"
               placeholder={tAuth("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -77,18 +82,11 @@ export function LoginForm() {
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t("password")}</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-muted-foreground hover:underline"
-              >
-                {t("forgotPassword")}
-              </Link>
-            </div>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -101,6 +99,13 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
+      {/* There is no self-service reset: no email provider, and every account
+          is created by a doctor in Settings, who can reset it there too. */}
+      <CardFooter className="justify-center">
+        <p className="text-muted-foreground text-center text-sm">
+          {t("askDoctor")}
+        </p>
+      </CardFooter>
     </Card>
   );
 }

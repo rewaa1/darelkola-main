@@ -1,16 +1,15 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
 export function LogoutButton() {
   const router = useRouter();
-  const supabase = createClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await authClient.signOut();
     router.push("/login");
     router.refresh();
   };

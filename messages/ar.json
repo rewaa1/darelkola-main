@@ -138,7 +138,10 @@
     "userNamePlaceholder": "د. أحمد محمد",
     "userEmailPlaceholder": "user@clinic.com",
     "userPassword": "كلمة المرور",
-    "userPasswordHint": "6 أحرف على الأقل",
+    "userPasswordHint": "8 أحرف على الأقل",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "resetPasswordFor": "كلمة مرور جديدة لـ {name}",
+    "passwordReset": "تم تحديث كلمة المرور. سيحتاج إلى تسجيل الدخول من جديد.",
     "userRole": "الدور",
     "selectRole": "اختر الدور",
     "userCreated": "تم إنشاء المستخدم",
@@ -658,12 +661,14 @@
       "subtitle": "سجّل الدخول للمتابعة",
       "email": "البريد الإلكتروني",
       "password": "كلمة المرور",
-      "forgotPassword": "هل نسيت كلمة المرور؟",
       "submit": "تسجيل الدخول",
       "submitting": "جارٍ تسجيل الدخول...",
       "noAccount": "ليس لديك حساب؟",
       "signUp": "إنشاء حساب",
-      "welcomeBack": "مرحبًا بعودتك!"
+      "welcomeBack": "مرحبًا بعودتك!",
+      "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "failed": "تعذّر تسجيل الدخول. حاول مرة أخرى.",
+      "askDoctor": "نسيت كلمة المرور؟ اطلب من الطبيب إعادة تعيينها من الإعدادات."
     },
     "signup": {
       "title": "إنشاء حساب",
@@ -683,17 +688,6 @@
       "createdSubtitle": "تم إنشاء حسابك بنجاح.",
       "goToLogin": "الذهاب إلى تسجيل الدخول"
     },
-    "forgot": {
-      "title": "هل نسيت كلمة المرور؟",
-      "subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين",
-      "email": "البريد الإلكتروني",
-      "submit": "إرسال رابط إعادة التعيين",
-      "submitting": "جارٍ الإرسال...",
-      "backToLogin": "العودة إلى تسجيل الدخول",
-      "sent": "تم إرسال رابط إعادة التعيين! تحقق من بريدك الإلكتروني.",
-      "checkEmailTitle": "تحقق من بريدك الإلكتروني",
-      "checkEmailSubtitle": "لقد أرسلنا رابط إعادة تعيين كلمة المرور إلى <strong>{email}</strong>"
-    },
     "emailPlaceholder": "doctor@clinic.com"
   },
   "landing": {
@@ -703,7 +697,7 @@
     "wordmarkArabic": "عيادة دار الكلى",
     "tagline": "رعاية الكلى، موثَّقة بالكامل.",
     "signIn": "تسجيل الدخول",
-    "copyright": "طُوِّر بواسطة Orbix لعيادة دار الكلى. © {year} Orbix. جميع الحقوق محفوظة.",
+    "copyright": "طُوِّر بواسطة Voidix.tech لعيادة دار الكلى. © {year} Voidix.tech. جميع الحقوق محفوظة.",
     "systems": {
       "patients": "المرضى",
       "queue": "قائمة الانتظار",
@@ -772,6 +766,10 @@
     "nameRequired": "الاسم مطلوب.",
     "userCreateFailed": "تعذّر إنشاء الحساب.",
     "userDeleteFailed": "تعذّر حذف الحساب.",
+    "userNotFound": "هذا الحساب لم يعد موجودًا.",
+    "emailInUse": "يوجد حساب بهذا البريد الإلكتروني بالفعل.",
+    "passwordTooShort": "يجب ألا تقل كلمة المرور عن 8 أحرف.",
+    "passwordResetFailed": "تعذّر إعادة تعيين كلمة المرور.",
     "clinicDeleteFailed": "تعذّر حذف العيادة."
   }
 }
