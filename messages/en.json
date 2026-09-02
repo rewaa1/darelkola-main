@@ -138,10 +138,13 @@
     "userNamePlaceholder": "Dr. John Smith",
     "userEmailPlaceholder": "user@clinic.com",
     "userPassword": "Password",
-    "userPasswordHint": "At least 6 characters",
+    "userPasswordHint": "At least 8 characters",
     "userRole": "Role",
     "selectRole": "Select role",
     "userCreated": "User created",
+    "resetPassword": "Reset password",
+    "resetPasswordFor": "New password for {name}",
+    "passwordReset": "Password updated. They will need to sign in again.",
     "userCreateFailed": "Failed to create user",
     "receptionists": "Receptionists",
     "receptionistsSubtitle": "Names shown when a receptionist performs an action. Only doctors can edit these.",
@@ -658,12 +661,14 @@
       "subtitle": "Sign in to continue",
       "email": "Email",
       "password": "Password",
-      "forgotPassword": "Forgot password?",
       "submit": "Sign In",
       "submitting": "Signing in...",
       "noAccount": "Don't have an account?",
       "signUp": "Sign up",
-      "welcomeBack": "Welcome back!"
+      "welcomeBack": "Welcome back!",
+      "invalidCredentials": "Incorrect email or password.",
+      "failed": "Could not sign in. Please try again.",
+      "askDoctor": "Forgot your password? Ask a doctor to reset it in Settings."
     },
     "signup": {
       "title": "Create Account",
@@ -683,17 +688,6 @@
       "createdSubtitle": "Your account has been created successfully.",
       "goToLogin": "Go to Login"
     },
-    "forgot": {
-      "title": "Forgot Password?",
-      "subtitle": "Enter your email and we'll send you a reset link",
-      "email": "Email",
-      "submit": "Send Reset Link",
-      "submitting": "Sending...",
-      "backToLogin": "Back to Login",
-      "sent": "Reset link sent! Check your email.",
-      "checkEmailTitle": "Check your email",
-      "checkEmailSubtitle": "We've sent a password reset link to <strong>{email}</strong>"
-    },
     "emailPlaceholder": "doctor@clinic.com"
   },
   "landing": {
@@ -703,7 +697,7 @@
     "wordmarkArabic": "عيادة دار الكلى",
     "tagline": "Renal care, on the record.",
     "signIn": "Sign in",
-    "copyright": "Built by Orbix for Darelkola Clinic. © {year} Orbix. All rights reserved.",
+    "copyright": "Built by Voidix.tech for Darelkola Clinic. © {year} Voidix.tech. All rights reserved.",
     "systems": {
       "patients": "Patients",
       "queue": "Queue",
@@ -772,6 +766,10 @@
     "nameRequired": "A name is required.",
     "userCreateFailed": "Could not create the account.",
     "userDeleteFailed": "Could not delete the account.",
+    "userNotFound": "That account no longer exists.",
+    "emailInUse": "An account with this email already exists.",
+    "passwordTooShort": "The password must be at least 8 characters.",
+    "passwordResetFailed": "Could not reset the password.",
     "clinicDeleteFailed": "Could not delete the clinic."
   }
 }

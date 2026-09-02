@@ -27,6 +27,8 @@ import {
   Mail,
   Languages,
   Contact,
+  KeyRound,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,6 +40,7 @@ import {
   deleteClinic,
   deleteUser,
   createUser,
+  resetUserPassword,
 } from "@/actions/settings";
 import {
   createReceptionist,
@@ -284,11 +287,31 @@ function UserRow({
   isSelf: boolean;
 }) {
   const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles");
   const format = useFormatter();
   const [isPending, startTransition] = useTransition();
+  // There is no self-service reset — no mail provider, and every account is
+  // created here by a doctor anyway. This is that flow's replacement.
+  const [resetting, setResetting] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
 
   const { failed, showError } = useActionErrors();
+
+  const handleReset = () => {
+    startTransition(async () => {
+      try {
+        const res = await resetUserPassword(user.id, newPassword);
+        if (failed(res)) return;
+        toast.success(t("passwordReset"));
+        setNewPassword("");
+        setResetting(false);
+      } catch {
+        showError();
+      }
+    });
+  };
+
   const handleDelete = () => {
     if (
       !confirm(t("deleteUserConfirm", { name: user.name, email: user.email }))
@@ -337,21 +360,70 @@ function UserRow({
           </div>
         </div>
         {isDoctor && !isSelf && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-            onClick={handleDelete}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="h-3.5 w-3.5" />
-            )}
-          </Button>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setResetting((open) => !open);
+                setNewPassword("");
+              }}
+              disabled={isPending}
+              title={t("resetPassword")}
+            >
+              {resetting ? (
+                <X className="h-3.5 w-3.5" />
+              ) : (
+                <KeyRound className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
         )}
       </div>
+      {/* Reset password — replaces the forgot-password-by-email flow */}
+      {resetting && (
+        <div className="flex items-end gap-2 ps-12">
+          <div className="flex-1 min-w-0">
+            <label className="text-xs font-medium">
+              {t("resetPasswordFor", { name: user.name })}
+            </label>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder={t("userPasswordHint")}
+              className="h-8 text-sm"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={handleReset}
+            disabled={isPending || newPassword.length < 8}
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 me-1 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5 me-1" />
+            )}
+            {tCommon("save")}
+          </Button>
+        </div>
+      )}
       {/* Bottom: role + join date */}
       <div className="flex items-center gap-2 ps-12">
         <Badge
@@ -421,7 +493,7 @@ function AddUserForm() {
     );
   }
 
-  const canSubmit = name.trim() && email.trim() && password.length >= 6;
+  const canSubmit = name.trim() && email.trim() && password.length >= 8;
 
   return (
     <div className="p-4 rounded-lg border border-dashed space-y-3">

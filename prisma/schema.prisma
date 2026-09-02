@@ -23,17 +23,94 @@ model Clinic {
   @@map("clinics")
 }
 
+// Better Auth's `user` model is mapped onto this table rather than given one of
+// its own. The ids here are the UUIDs the old Supabase Auth issued, and
+// pre_assessments.assistant_id points at them — reusing the table is what keeps
+// every historical record attached to the right person across the migration.
 model User {
-  id        String   @id // Same ID as Supabase Auth user
-  email     String   @unique
-  name      String
-  role      UserRole @default(RECEPTIONIST)
+  id            String   @id // Migrated Supabase Auth UUID, or a fresh UUID
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
+  name          String
+  image         String?
+  role          UserRole @default(RECEPTIONIST)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  preAssessments PreAssessment[]
+  authSessions   AuthSession[]
+  authAccounts   AuthAccount[]
+
+  @@map("users")
+}
+
+// ===========================================
+// Better Auth
+// ===========================================
+//
+// These three are Better Auth's own tables. They are named Auth* rather than
+// the library's defaults because `Session` is already taken here — it is the
+// clinical encounter model, and the collision would be silent and confusing.
+// The mapping back to the library's names lives in src/lib/auth.ts.
+
+model AuthSession {
+  id        String   @id
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  preAssessments PreAssessment[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("users")
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+// One row per way of signing in. Today that is only providerId "credential",
+// whose `password` column holds the bcrypt hash carried over from Supabase.
+//
+// `issuer` is required and is the real identity key: Better Auth 1.7 scopes an
+// account by (issuer, accountId), not by providerId, so that an OAuth provider
+// id can never collide with an internal login. For password accounts the value
+// is the synthetic "local:credential". Sign-in matches on it exactly — a row
+// with the right hash but a missing or wrong issuer is simply not found, and
+// the user gets "invalid password" with no hint as to why.
+model AuthAccount {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  issuer                String
+  userId                String    @map("user_id")
+  password              String?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model AuthVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("auth_verifications")
 }
 
 // ASSISTANT is a clinician who examines the patient before the doctor does.

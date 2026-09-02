@@ -1,8 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdminFetch } from "@/lib/supabase/admin";
+import { requireRole, hashPassword } from "@/lib/auth";
 import { revalidatePath, updateTag } from "next/cache";
 import { UserRole } from "@prisma/client";
 import { CLINICS_CACHE_TAG } from "@/lib/clinics";
@@ -11,6 +10,17 @@ import {
   actionError,
   runAction,
 } from "@/lib/action-result";
+
+// Better Auth's own default. Enforced here too, because these actions write the
+// credential row directly rather than going through the sign-up endpoint.
+const MIN_PASSWORD_LENGTH = 8;
+
+// Better Auth 1.7 scopes an account by (issuer, accountId) rather than by
+// providerId, so that an OAuth provider id can never collide with an internal
+// login. Password accounts carry this synthetic issuer, and sign-in matches on
+// it exactly — a credential written without it is never found, and the person
+// is told "invalid password" with nothing to indicate why.
+const CREDENTIAL_ISSUER = "local:credential";
 
 // ===========================================
 // Get All Users
@@ -33,61 +43,125 @@ export async function createUser(data: {
   role: UserRole;
 }): Promise<ActionResult> {
   return runAction(async () => {
-    // Verify the caller is a DOCTOR
-    const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+    await requireRole("DOCTOR");
 
-    if (!authUser) actionError("unauthorized");
+    if (data.password.length < MIN_PASSWORD_LENGTH) {
+      actionError("passwordTooShort");
+    }
 
-    const caller = await prisma.user.findUnique({
-      where: { id: authUser.id },
-    });
+    // Hash through the auth context, never bcrypt directly, so the credential
+    // is always readable by whatever hasher sign-in is configured with.
+    const passwordHash = await hashPassword(data.password);
+    const id = crypto.randomUUID();
 
-    if (!caller || caller.role !== "DOCTOR") actionError("doctorsOnly");
-
-    // Create the login in Supabase Auth. The metadata is informational only —
-    // this database has no `handle_new_user` trigger, so the `users` row that
-    // getCurrentUser() depends on is written below, by us.
-    const res = await supabaseAdminFetch("/auth/v1/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password,
-        email_confirm: true,
-        user_metadata: { name: data.name, role: data.role },
-      }),
-    });
-
-    if (!res.ok) actionError("userCreateFailed");
-
-    const createdUser = (await res.json().catch(() => ({}))) as { id?: string };
-    if (!createdUser.id) actionError("userCreateFailed");
-
-    // Mirror the account into `users`. Upsert rather than create, so this keeps
-    // working if a handle_new_user trigger is ever added.
+    // The login and the profile are two rows in one database now, so this is a
+    // single transaction. Under Supabase Auth they lived in different systems
+    // and this function had to create the account over HTTP, mirror it here,
+    // and issue a compensating DELETE if the mirror failed — a half-created
+    // user could authenticate but resolve to no profile, stranding that person
+    // in a redirect loop at /login. That failure mode is now impossible.
     try {
-      await prisma.user.upsert({
-        where: { id: createdUser.id },
-        update: { email: data.email, name: data.name, role: data.role },
-        create: {
-          id: createdUser.id,
-          email: data.email,
-          name: data.name,
-          role: data.role,
+      await prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id,
+            email: data.email,
+            name: data.name,
+            role: data.role,
+            // Internal accounts, created by a doctor who already knows the
+            // person. There is no mail server and nothing to confirm.
+            emailVerified: true,
+          },
+        });
+
+        await tx.authAccount.create({
+          data: {
+            id: crypto.randomUUID(),
+            // For providerId "credential" Better Auth expects accountId to be
+            // the user's own id.
+            accountId: id,
+            providerId: "credential",
+            issuer: CREDENTIAL_ISSUER,
+            userId: id,
+            password: passwordHash,
+          },
+        });
+      });
+    } catch (error) {
+      // users.email is UNIQUE — by far the likeliest failure, and the one the
+      // doctor can actually act on.
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        (error as { code?: string }).code === "P2002"
+      ) {
+        actionError("emailInUse");
+      }
+      throw error;
+    }
+
+    revalidatePath("/settings");
+  });
+}
+
+// ===========================================
+// Reset a User's Password (Doctor-only)
+// ===========================================
+
+/**
+ * Replaces the forgot-password-by-email flow, which this app never actually
+ * had: it linked to a /reset-password page that did not exist, and Better Auth
+ * would need a mail provider this project does not have. A doctor creates
+ * every account by hand, so a doctor resets it by hand too.
+ */
+export async function resetUserPassword(
+  userId: string,
+  newPassword: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRole("DOCTOR");
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      actionError("passwordTooShort");
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    await prisma.$transaction(async (tx) => {
+      const account = await tx.authAccount.findUnique({
+        where: {
+          issuer_accountId: { issuer: CREDENTIAL_ISSUER, accountId: userId },
         },
       });
-    } catch {
-      // Roll the login back. A login with no `users` row authenticates fine but
-      // resolves to no profile, stranding that person in a redirect loop at
-      // /login with nothing left to repair from the UI.
-      await supabaseAdminFetch(`/auth/v1/admin/users/${createdUser.id}`, {
-        method: "DELETE",
-      }).catch(() => {});
-      actionError("userCreateFailed");
-    }
+
+      if (account) {
+        await tx.authAccount.update({
+          where: { id: account.id },
+          data: { password: passwordHash },
+        });
+      } else {
+        // A users row that predates the credential import, or one whose account
+        // was somehow lost. Give it a credential rather than failing — the
+        // alternative is a profile nobody can ever sign in to.
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        if (!user) actionError("userNotFound");
+
+        await tx.authAccount.create({
+          data: {
+            id: crypto.randomUUID(),
+            accountId: userId,
+            providerId: "credential",
+            issuer: CREDENTIAL_ISSUER,
+            userId,
+            password: passwordHash,
+          },
+        });
+      }
+
+      // Force every device holding the old password's session back to /login.
+      // A reset that leaves the old sessions alive is not a reset.
+      await tx.authSession.deleteMany({ where: { userId } });
+    });
 
     revalidatePath("/settings");
   });
@@ -99,37 +173,16 @@ export async function createUser(data: {
 
 export async function deleteUser(userId: string): Promise<ActionResult> {
   return runAction(async () => {
-    // Verify the caller is a DOCTOR
-    const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) actionError("unauthorized");
-
-    const caller = await prisma.user.findUnique({
-      where: { id: authUser.id },
-    });
-
-    if (!caller || caller.role !== "DOCTOR") actionError("doctorsOnly");
+    const caller = await requireRole("DOCTOR");
 
     // Cannot delete yourself
-    if (userId === authUser.id) actionError("cannotDeleteSelf");
+    if (userId === caller.id) actionError("cannotDeleteSelf");
 
-    // Revoke the login first. If this fails, the account still works and the
-    // `users` row is intact — nothing is half-deleted. Doing it the other way
-    // round strands a login that can authenticate but has no `users` row, which
-    // leaves that person stuck in a redirect loop with no way to fix it.
-    const res = await supabaseAdminFetch(`/auth/v1/admin/users/${userId}`, {
-      method: "DELETE",
-    });
-
-    // 404 means the auth account was already gone; the row still needs clearing.
-    if (!res.ok && res.status !== 404) actionError("userDeleteFailed");
-
-    // deleteMany, not delete: a cascade from auth.users may already have removed
-    // the row, and that should not read as a failure.
-    await prisma.user.deleteMany({ where: { id: userId } });
+    // ON DELETE CASCADE takes the credential and every active session with it,
+    // so there is no window where a revoked account still authenticates.
+    // deleteMany, not delete: a row that is already gone is not a failure.
+    const { count } = await prisma.user.deleteMany({ where: { id: userId } });
+    if (count === 0) actionError("userDeleteFailed");
 
     revalidatePath("/settings");
   });
@@ -169,19 +222,7 @@ export async function createClinic(data: { name: string; phone?: string }) {
 
 export async function deleteClinic(clinicId: string): Promise<ActionResult> {
   return runAction(async () => {
-    // Verify the caller is a DOCTOR
-    const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) actionError("unauthorized");
-
-    const caller = await prisma.user.findUnique({
-      where: { id: authUser.id },
-    });
-
-    if (!caller || caller.role !== "DOCTOR") actionError("doctorsOnly");
+    await requireRole("DOCTOR");
 
     try {
       await prisma.clinic.delete({ where: { id: clinicId } });
